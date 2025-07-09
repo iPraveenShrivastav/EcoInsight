@@ -23,6 +23,7 @@ class ScannerViewModel: ObservableObject {
     }
     
     private func onBarcodeScanned(_ upc: String) {
+        print("🔍 Scanned UPC: \(upc)")
         isLoading = true
         error = nil
         

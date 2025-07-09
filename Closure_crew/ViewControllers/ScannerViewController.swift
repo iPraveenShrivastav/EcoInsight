@@ -173,7 +173,9 @@ class ScannerViewController: UIViewController {
                         self.view.layer.addSublayer(previewLayer)
                         self.previewLayer = previewLayer
                         
-                        session.startRunning()
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            session.startRunning()
+                        }
                         continuation.resume()
                     }
                     

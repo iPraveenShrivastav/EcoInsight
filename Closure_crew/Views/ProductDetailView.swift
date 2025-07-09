@@ -2,7 +2,12 @@ import SwiftUI
 
 struct ProductDetailView: View {
     let productInfo: ProductInfo
-    @AppStorage("selectedAllergens") private var selectedAllergens = Set<String>()
+    @AppStorage("selectedAllergens") private var selectedAllergensRaw: String = ""
+    
+    private var selectedAllergens: Set<String> {
+        get { Set(selectedAllergensRaw.split(separator: ",").map { String($0) }) }
+        set { selectedAllergensRaw = newValue.joined(separator: ",") }
+    }
     
     var body: some View {
         ScrollView {
@@ -127,5 +132,29 @@ struct NutritionRow: View {
                 .foregroundColor(.secondary)
         }
         .accessibilityLabel("\(label): \(value)")
+    }
+}
+
+struct ProductDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProductDetailView(productInfo: ProductInfo(
+            barcode: "1234567890",
+            nutrition: NutritionFacts(
+                item_name: "Sample Product",
+                nf_calories: 250,
+                nf_total_fat: 10,
+                nf_protein: 5,
+                nf_total_carbohydrate: 30,
+                nf_sugars: 15
+            ),
+            carbon: CarbonResponse(
+                co2e: 1.23,
+                co2e_breakdown: [
+                    Breakdown(scope: "production", co2e: 0.8),
+                    Breakdown(scope: "transport", co2e: 0.43)
+                ]
+            ),
+            allergens: ["Peanuts", "Soy"]
+        ))
     }
 }
