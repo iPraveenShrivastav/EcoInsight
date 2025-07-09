@@ -14,6 +14,7 @@ struct ScanView: View {
             VStack(spacing: 20) {
                 if scannerViewModel.isLoading {
                     ProgressView("Loading product information...")
+                        .accessibilityLabel("Loading product information")
                 } else if let error = scannerViewModel.error {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
@@ -28,8 +29,9 @@ struct ScanView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                } else if let product = scannerViewModel.scannedProduct {
-                    ProductImpactView(product: product)
+                    .accessibilityElement(children: .combine)
+                } else if let productInfo = scannerViewModel.productInfo {
+                    ProductDetailView(productInfo: productInfo)
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "barcode.viewfinder")
@@ -37,8 +39,7 @@ struct ScanView: View {
                             .foregroundColor(.green)
                         
                         Text("Scan Product Barcode")
-                            .font(.title2)
-                            .fontWeight(.medium)
+                            .font(.title2.weight(.medium))
                         
                         Text("Supports EAN-8, EAN-13, and UPC-E barcodes")
                             .font(.subheadline)
@@ -46,6 +47,8 @@ struct ScanView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Ready to scan product barcode")
                 }
                 
                 Button(action: {
@@ -55,9 +58,11 @@ struct ScanView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                         .padding()
+                        .frame(maxWidth: .infinity)
                         .background(Color.green)
                         .cornerRadius(10)
                 }
+                .accessibilityHint("Double tap to open barcode scanner")
             }
             .padding()
             .sheet(isPresented: $showingScanner) {
@@ -100,4 +105,4 @@ struct ScannerOverlay: View {
         }
         .edgesIgnoringSafeArea(.all)
     }
-} 
+}

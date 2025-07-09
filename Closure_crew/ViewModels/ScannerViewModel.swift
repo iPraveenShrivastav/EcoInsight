@@ -5,43 +5,62 @@ class ScannerViewModel: ObservableObject {
     @Published var scannedCode: String? {
         didSet {
             if let code = scannedCode {
-                fetchProductInfo(for: code)
+                onBarcodeScanned(code)
             }
         }
     }
-    @Published var scannedProduct: Product?
+    @Published var productInfo: ProductInfo?
     @Published var isLoading = false
     @Published var error: String?
     
-    private let productService: ProductService
     private let historyViewModel: HistoryViewModel
+    private let nutritionService = NutritionService()
+    private let carbonService = CarbonService()
+    private let openFoodService = OpenFoodFactsService()
     
     init(historyViewModel: HistoryViewModel) {
         self.historyViewModel = historyViewModel
-        self.productService = ProductService()
-        Task {
-            await productService.initialize()
-        }
     }
     
-    func fetchProductInfo(for barcode: String) {
+    private func onBarcodeScanned(_ upc: String) {
         isLoading = true
         error = nil
         
-        Task {
-            do {
-                let product = try await productService.fetchProduct(barcode: barcode)
-                self.scannedProduct = product
-                self.historyViewModel.addScan(product)
-            } catch {
-                self.error = "Product not found in database.\nOnly supported products can be scanned."
-            }
+        var info = ProductInfo(barcode: upc)
+        let group = DispatchGroup()
+        
+        group.enter()
+        nutritionService.fetchNutrition(for: upc) { [weak self] nutrition in
+            info.nutrition = nutrition
+            group.leave()
+        }
+        
+        group.enter()
+        carbonService.fetchCarbon(for: upc) { [weak self] carbon in
+            info.carbon = carbon
+            group.leave()
+        }
+        
+        group.enter()
+        openFoodService.fetchAllergens(for: upc) { [weak self] allergens in
+            info.allergens = allergens
+            group.leave()
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.productInfo = info
             self.isLoading = false
+            
+            // Check if we got any data
+            if info.nutrition == nil && info.carbon == nil && info.allergens == nil {
+                self.error = "No product information found"
+            }
         }
     }
     
-    // Add this method for testing
+    // For testing
     func testScan(barcode: String) {
         self.scannedCode = barcode
     }
-} 
+}
