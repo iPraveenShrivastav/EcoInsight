@@ -1,9 +1,76 @@
 import SwiftUI
 
+struct ProductHistoryRow: View {
+    let product: Product
+    @Binding var selectedEcoGrade: String
+    @Binding var showingEcoGradeInfo: Bool
+
+    var cleanPackaging: String {
+        product.packaging.replacingOccurrences(of: "en:", with: "").capitalized
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Product Name
+            Text(product.name)
+                .font(.headline)
+
+            // Packaging
+            HStack(spacing: 8) {
+                Image(systemName: "shippingbox.fill")
+                    .foregroundColor(.gray)
+                Text(cleanPackaging)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            // Eco Score
+            HStack(spacing: 8) {
+                Image(systemName: product.environmentalImpact.ecoGradeInfo.icon)
+                    .foregroundColor(product.environmentalImpact.ecoGradeInfo.color)
+                    .onTapGesture {
+                        if let ecoGrade = product.ecoScoreGrade {
+                            selectedEcoGrade = ecoGrade
+                            showingEcoGradeInfo = true
+                        }
+                    }
+                Text("Eco Score: ")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Text(product.environmentalImpact.ecoGradeInfo.displayGrade)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(product.environmentalImpact.ecoGradeInfo.color)
+            }
+
+            // Carbon Emission
+            HStack(spacing: 8) {
+                Image(systemName: "cloud.fill")
+                    .foregroundColor(.gray)
+                Text(product.geminiCarbonResult ?? product.carbonFootprint)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            // Recyclable status
+            HStack(spacing: 8) {
+                Image(systemName: product.environmentalImpact.recyclable ? "arrow.3.trianglepath" : "trash")
+                    .foregroundColor(product.environmentalImpact.recyclable ? .green : .red)
+                Text(product.environmentalImpact.recyclable ? "Recyclable" : "Not Recyclable")
+                    .font(.subheadline)
+                    .foregroundColor(product.environmentalImpact.recyclable ? .green : .red)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
 struct HistoryView: View {
     @ObservedObject var viewModel: HistoryViewModel
     @State private var showingClearConfirmation = false
-    
+    @State private var showingEcoGradeInfo = false
+    @State private var selectedEcoGrade: String = ""
+
     var body: some View {
         NavigationView {
             Group {
@@ -12,11 +79,9 @@ struct HistoryView: View {
                         Image(systemName: "barcode.viewfinder")
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
-                        
                         Text("No Products Scanned Yet")
                             .font(.title2)
                             .foregroundColor(.gray)
-                        
                         Text("Start scanning products to track their environmental impact")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
@@ -27,10 +92,15 @@ struct HistoryView: View {
                 } else {
                     List {
                         ForEach(viewModel.scannedProducts) { product in
-                            ProductRow(product: product)
+                            ProductHistoryRow(
+                                product: product,
+                                selectedEcoGrade: $selectedEcoGrade,
+                                showingEcoGradeInfo: $showingEcoGradeInfo
+                            )
                         }
                         .onDelete(perform: viewModel.deleteProduct)
                     }
+                    .listStyle(InsetGroupedListStyle())
                     .toolbar {
                         EditButton()
                     }
@@ -54,69 +124,18 @@ struct HistoryView: View {
             } message: {
                 Text("Are you sure you want to clear all scan history?")
             }
+            .sheet(isPresented: $showingEcoGradeInfo) {
+                EcoGradeInfoSheet(grade: selectedEcoGrade)
+            }
         }
     }
-}
 
-struct ProductRow: View {
-    let product: Product
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(product.name)
-                .font(.headline)
-            
-            HStack {
-                Image(systemName: "shippingbox.fill")
-                    .foregroundColor(.secondary)
-                Text(product.packaging)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            HStack {
-                Image(systemName: "leaf.fill")
-                    .foregroundColor(product.environmentalImpact.impactLevel.color)
-                Text("Impact Score: \(String(format: "%.1f", product.environmentalImpact.score))")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            HStack {
-                Image(systemName: "cloud.fill")
-                    .foregroundColor(.secondary)
-                Text(product.carbonFootprint)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            // Show packaging tags
-            HStack {
-                ForEach(product.packagingTags, id: \.self) { tag in
-                    Text(tag)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.secondary.opacity(0.2))
-                        .cornerRadius(8)
-                }
-            }
-            
-            // Show recyclable and biodegradable status
-            HStack {
-                if product.environmentalImpact.recyclable {
-                    Label("Recyclable", systemImage: "arrow.3.trianglepath")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-                if product.environmentalImpact.biodegradable {
-                    Label("Biodegradable", systemImage: "leaf")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-            }
-        }
-        .padding(.vertical, 4)
+    // Helper to get the correct carbon emission (Gemini or API)
+    func getCarbonEmission(for product: Product) -> String? {
+        // If you have a way to access the Gemini result for this product, return it here.
+        // For now, just return product.carbonFootprint.
+        // You can enhance this to use a cache or lookup if needed.
+        return product.carbonFootprint
     }
 }
 
@@ -125,3 +144,5 @@ struct HistoryView_Previews: PreviewProvider {
         HistoryView(viewModel: HistoryViewModel())
     }
 } 
+
+

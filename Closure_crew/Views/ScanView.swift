@@ -1,6 +1,9 @@
 import SwiftUI
 import AVFoundation
 
+// Set your Gemini API key here
+let GEMINI_API_KEY = "AIzaSyChk26SFhMAhZIUVMnYNPwXdoREpT1iUg0"
+
 struct ScanView: View {
     @StateObject private var scannerViewModel: ScannerViewModel
     @State private var showingScanner = false
@@ -31,7 +34,7 @@ struct ScanView: View {
                     }
                     .accessibilityElement(children: .combine)
                 } else if let productInfo = scannerViewModel.productInfo {
-                    ProductDetailView(productInfo: productInfo)
+                    ProductDetailView(productInfo: productInfo, scannerViewModel: scannerViewModel)
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "barcode.viewfinder")

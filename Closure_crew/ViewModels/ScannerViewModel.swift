@@ -12,14 +12,18 @@ class ScannerViewModel: ObservableObject {
     @Published var productInfo: ProductInfo?
     @Published var isLoading = false
     @Published var error: String?
+    @Published var geminiCarbonResult: String?
     
     private let historyViewModel: HistoryViewModel
+    private let productService = ProductService()
     private let nutritionService = NutritionService()
-    private let carbonService = CarbonService()
-    private let openFoodService = OpenFoodFactsService()
+    private let geminiService = GeminiService(apiKey: "AIzaSyBFPSpiWUNLvL390wzHI0NUyN7ZDsh5EV0")
     
     init(historyViewModel: HistoryViewModel) {
         self.historyViewModel = historyViewModel
+        Task {
+            await productService.initialize()
+        }
     }
     
     private func onBarcodeScanned(_ upc: String) {
@@ -27,36 +31,103 @@ class ScannerViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        var info = ProductInfo(barcode: upc)
-        let group = DispatchGroup()
-        
-        group.enter()
-        nutritionService.fetchNutrition(for: upc) { [weak self] nutrition in
-            info.nutrition = nutrition
-            group.leave()
-        }
-        
-        group.enter()
-        carbonService.fetchCarbon(for: upc) { [weak self] carbon in
-            info.carbon = carbon
-            group.leave()
-        }
-        
-        group.enter()
-        openFoodService.fetchAllergens(for: upc) { [weak self] allergens in
-            info.allergens = allergens
-            group.leave()
-        }
-        
-        group.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
-            self.productInfo = info
-            self.isLoading = false
-            
-            // Check if we got any data
-            if info.nutrition == nil && info.carbon == nil && info.allergens == nil {
-                self.error = "No product information found"
+        Task {
+            do {
+                // Try to get product from ProductService first (includes eco grade)
+                let product = try await productService.fetchProduct(barcode: upc)
+                
+                // Create ProductInfo from the product
+                var info = ProductInfo(barcode: upc)
+                info.nutrition = NutritionFacts(
+                    item_name: product.name,
+                    nf_calories: 0, // We'll get this from nutrition service
+                    nf_total_fat: 0,
+                    nf_protein: 0,
+                    nf_total_carbohydrate: 0,
+                    nf_sugars: 0
+                )
+                info.ecoScoreGrade = product.ecoScoreGrade
+                info.packaging = product.packaging
+                info.packagingTags = product.packagingTags
+                
+                // Get additional data from nutrition and allergens only
+                let (nutrition, allergens) = await (
+                    fetchNutritionData(for: upc),
+                    fetchAllergensData(for: upc)
+                )
+                
+                // Update info with fetched data
+                if let nutrition = nutrition {
+                    info.nutrition = nutrition.nutrition
+                    info.ingredients = nutrition.ingredients
+                    info.ecoScoreGrade = nutrition.ecoScoreGrade
+                    info.productImageUrl = nutrition.imageUrl
+                    info.quantity = nutrition.quantity
+                    info.packaging = nutrition.packaging
+                    info.packagingTags = nutrition.packagingTags
+                }
+                if let allergens = allergens {
+                    info.allergens = allergens
+                }
+                // Check if barcode is already in history and reuse Gemini value if present
+                let cachedGemini = historyViewModel.scannedProducts.first(where: { $0.code == upc })?.geminiCarbonResult
+                let geminiResult: String?
+                if let cached = cachedGemini, !cached.isEmpty {
+                    print("♻️ Using cached Gemini result for barcode \(upc): \(cached)")
+                    geminiResult = cached
+                } else {
+                    geminiResult = await geminiService.estimateCarbon(for: info)
+                }
+                self.geminiCarbonResult = geminiResult
+                
+                // Update the product info
+                self.productInfo = info
+                self.isLoading = false
+                
+                // Add to history, always save Gemini result
+                let productForHistory = Product(
+                    code: product.code,
+                    name: product.name,
+                    packaging: product.packaging,
+                    packagingTags: product.packagingTags,
+                    carbonFootprint: product.carbonFootprint,
+                    ecoScore: product.ecoScore,
+                    ecoScoreGrade: product.ecoScoreGrade,
+                    geminiCarbonResult: geminiResult
+                )
+                self.historyViewModel.addScan(productForHistory)
+                
+            } catch {
+                print("❌ Error fetching product: \(error)")
+                self.error = "Product not found"
+                self.isLoading = false
             }
+        }
+    }
+    
+    private func fetchNutritionData(for upc: String) async -> (nutrition: NutritionFacts?, ingredients: String?, ecoScoreGrade: String?, imageUrl: String?, quantity: String?, packaging: String?, packagingTags: [String]?)? {
+        await withCheckedContinuation { continuation in
+            nutritionService.fetchNutrition(for: upc) { nutrition, ingredients, ecoScoreGrade, imageUrl, quantity, packaging, packagingTags in
+                continuation.resume(returning: (nutrition, ingredients, ecoScoreGrade, imageUrl, quantity, packaging, packagingTags))
+            }
+        }
+    }
+    
+    private func fetchAllergensData(for upc: String) async -> [String]? {
+        await withCheckedContinuation { continuation in
+            // Use a simple API call for allergens
+            let url = URL(string: "https://world.openfoodfacts.org/api/v0/product/\(upc).json")!
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let product = json["product"] as? [String: Any],
+                   let tags = product["allergens_tags"] as? [String] {
+                    let clean = tags.compactMap { $0.split(separator: ":").last.map(String.init) }
+                    continuation.resume(returning: clean)
+                } else {
+                    continuation.resume(returning: nil)
+                }
+            }.resume()
         }
     }
     

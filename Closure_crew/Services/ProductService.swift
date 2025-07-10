@@ -49,20 +49,59 @@ actor ProductService {
     }
     
     func fetchProduct(barcode: String) async throws -> Product {
-        guard let products = localProducts else {
-            throw ProductError.invalidData
+        // First try to get from local database
+        if let products = localProducts,
+           let response = products[barcode] {
+            return createProductFromResponse(response)
         }
         
-        guard let response = products[barcode] else {
+        // If not found locally, try to fetch from OpenFoodFacts API
+        return try await fetchFromOpenFoodFacts(barcode: barcode)
+    }
+    
+    private func fetchFromOpenFoodFacts(barcode: String) async throws -> Product {
+        let url = URL(string: "https://world.openfoodfacts.org/api/v0/product/\(barcode).json")!
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        
+        guard let json = json,
+              let productData = json["product"] as? [String: Any] else {
             throw ProductError.productNotFound
         }
         
+        // Create response object
+        let response = OpenFoodFactsResponse(
+            code: barcode,
+            product: OpenFoodFactsProductDetails(
+                productName: productData["product_name"] as? String,
+                packaging: productData["packaging"] as? String,
+                packagingTags: productData["packaging_tags"] as? [String],
+                carbonFootprint: productData["carbon_footprint_100g"] as? String,
+                ecoScore: productData["ecoscore_score"] as? String,
+                ecoScoreGrade: productData["ecoscore_grade"] as? String
+            ),
+            status: json["status"] as? Int
+        )
+        
+        // Save to local database
+        var updatedProducts = localProducts ?? [:]
+        updatedProducts[barcode] = response
+        localProducts = updatedProducts
+        saveLocalProducts()
+        
+        return createProductFromResponse(response)
+    }
+    
+    private func createProductFromResponse(_ response: OpenFoodFactsResponse) -> Product {
         return Product(
             code: response.code,
             name: response.product.productName ?? "Unknown Product",
             packaging: response.product.packaging ?? "Unknown Packaging",
             packagingTags: response.product.packagingTags ?? [],
-            carbonFootprint: response.product.carbonFootprint ?? "Not Available"
+            carbonFootprint: response.product.carbonFootprint ?? "Not Available",
+            ecoScore: response.product.ecoScore,
+            ecoScoreGrade: response.product.ecoScoreGrade
         )
     }
     
@@ -74,28 +113,32 @@ actor ProductService {
                 name: "Parle-G Original Glucose Biscuits",
                 packaging: "Plastic wrapper",
                 packagingTags: ["plastic", "wrapper"],
-                carbonFootprint: "1.2kg CO2"
+                carbonFootprint: "1.2kg CO2",
+                ecoScoreGrade: "C"
             ),
             Product(
                 code: "8901063142125",
                 name: "Maggi 2-Minute Noodles",
                 packaging: "Plastic wrapper with cardboard box",
                 packagingTags: ["plastic", "cardboard", "recyclable"],
-                carbonFootprint: "2.1kg CO2"
+                carbonFootprint: "2.1kg CO2",
+                ecoScoreGrade: "D"
             ),
             Product(
                 code: "8901052089844",
                 name: "Britannia Marie Gold",
                 packaging: "Plastic wrapper",
                 packagingTags: ["plastic", "wrapper"],
-                carbonFootprint: "1.4kg CO2"
+                carbonFootprint: "1.4kg CO2",
+                ecoScoreGrade: "C"
             ),
             Product(
                 code: "0194253408079",
                 name: "iPhone-14",
                 packaging: "Paper Box",
                 packagingTags: ["paper", "recyclable"],
-                carbonFootprint: "1.2kg CO2"
+                carbonFootprint: "1.2kg CO2",
+                ecoScoreGrade: "B"
             )
         ]
         
@@ -106,7 +149,9 @@ actor ProductService {
                     productName: product.name,
                     packaging: product.packaging,
                     packagingTags: product.packagingTags,
-                    carbonFootprint: product.carbonFootprint
+                    carbonFootprint: product.carbonFootprint,
+                    ecoScore: nil,
+                    ecoScoreGrade: product.ecoScoreGrade
                 ),
                 status: 1
             )
@@ -123,7 +168,9 @@ actor ProductService {
                 productName: product.name,
                 packaging: product.packaging,
                 packagingTags: product.packagingTags,
-                carbonFootprint: product.carbonFootprint
+                carbonFootprint: product.carbonFootprint,
+                ecoScore: product.ecoScore,
+                ecoScoreGrade: product.ecoScoreGrade
             ),
             status: 1
         )

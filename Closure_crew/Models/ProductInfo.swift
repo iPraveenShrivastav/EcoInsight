@@ -6,6 +6,12 @@ struct ProductInfo: Identifiable {
     var nutrition: NutritionFacts?
     var carbon: CarbonResponse?
     var allergens: [String]?
+    var ingredients: String?
+    var ecoScoreGrade: String?
+    var productImageUrl: String?
+    var quantity: String?
+    var packaging: String?
+    var packagingTags: [String]?
 }
 
 struct NutritionFacts: Decodable {

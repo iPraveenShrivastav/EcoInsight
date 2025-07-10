@@ -60,6 +60,22 @@ struct DashboardView: View {
                         }
                     }
                     
+                    // Eco Grade Legend Card
+                    DashboardCard(
+                        title: "Eco Grade Guide",
+                        subtitle: "Understanding environmental impact",
+                        systemImage: "leaf.fill",
+                        color: .green
+                    ) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            EcoGradeLegendRow(grade: "A", description: "Excellent environmental impact")
+                            EcoGradeLegendRow(grade: "B", description: "Good environmental impact")
+                            EcoGradeLegendRow(grade: "C", description: "Average environmental impact")
+                            EcoGradeLegendRow(grade: "D", description: "Poor environmental impact")
+                            EcoGradeLegendRow(grade: "E", description: "Very poor environmental impact")
+                        }
+                    }
+                    
                     // Tips Card
                     DashboardCard(
                         title: "Eco-Friendly Tips",
@@ -146,6 +162,33 @@ struct InfoRow: View {
                 .frame(width: 20)
             Text(text)
                 .foregroundColor(.primary)
+            Spacer()
+        }
+    }
+}
+
+struct EcoGradeLegendRow: View {
+    let grade: String
+    let description: String
+    
+    var ecoGradeInfo: EcoGradeInfo {
+        EcoGradeInfo(grade: grade)
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(grade)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 30, height: 30)
+                .background(ecoGradeInfo.color)
+                .clipShape(Circle())
+            
+            Text(description)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            
             Spacer()
         }
     }

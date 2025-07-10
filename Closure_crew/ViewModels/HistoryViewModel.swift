@@ -10,8 +10,11 @@ class HistoryViewModel: ObservableObject {
     }
     
     func addScan(_ product: Product) {
-        scannedProducts.insert(product, at: 0)
-        saveHistory()
+        // Prevent duplicate barcodes in history
+        if !scannedProducts.contains(where: { $0.code == product.code }) {
+            scannedProducts.insert(product, at: 0)
+            saveHistory()
+        }
     }
     
     func deleteProduct(at offsets: IndexSet) {

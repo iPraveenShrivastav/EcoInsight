@@ -17,11 +17,15 @@ struct OpenFoodFactsProductDetails: Codable {
     let packaging: String?
     let packagingTags: [String]?
     let carbonFootprint: String?
+    let ecoScore: String?
+    let ecoScoreGrade: String?
     
     enum CodingKeys: String, CodingKey {
         case productName = "product_name"
         case packaging
         case packagingTags = "packaging_tags"
         case carbonFootprint = "carbon_footprint_100g"
+        case ecoScore = "ecoscore_score"
+        case ecoScoreGrade = "ecoscore_grade"
     }
 } 
