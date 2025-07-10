@@ -14,115 +14,200 @@ struct ProductDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 28) {
-                // Product Image
-                if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                                .frame(height: 180)
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxHeight: 180)
-                                .cornerRadius(16)
-                                .shadow(radius: 6)
-                        case .failure:
-                            Image(systemName: "photo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 120)
-                                .foregroundColor(.gray)
-                        @unknown default:
-                            EmptyView()
-                        }
+            VStack(spacing: 20) {
+                // Header
+                HStack {
+                    Button(action: { /* handle back */ }) {
+                        Image(systemName: "chevron.left")
+                            .font(.title2.bold())
+                            .foregroundColor(.black)
                     }
-                    .padding(.top, 8)
+                    Spacer()
+                    Text("Product Insights")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                    Spacer()
+                    Color.clear.frame(width: 32) // for symmetry
                 }
-                // Product Name
-                if let name = productInfo.nutrition?.item_name, !name.isEmpty {
-                    Text(name)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .multilineTextAlignment(.center)
-                }
-                // EcoScore Badge
-                if let ecoScore = productInfo.ecoScoreGrade {
-                    EcoScoreBadge(grade: ecoScore)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.bottom, 4)
-                        .onTapGesture {
-                            // Show detailed eco grade information
-                            showEcoGradeInfo(ecoScore)
-                        }
-                }
-
-                // Quantity & Packaging
-                HStack(spacing: 16) {
-                    if let quantity = productInfo.quantity, !quantity.isEmpty {
-                        Label(quantity, systemImage: "scalemass")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    if let packaging = productInfo.packaging, !packaging.isEmpty {
-                        Label(packaging.capitalized, systemImage: "shippingbox")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                // Only show packaging tags if they add extra info
-                if let tags = productInfo.packagingTags, !tags.isEmpty {
-                    let cleanTags = tags.map { $0.replacingOccurrences(of: "en:", with: "").capitalized }
-                    let mainPackaging = productInfo.packaging?.lowercased() ?? ""
-                    let filteredTags = cleanTags.filter { !mainPackaging.contains($0.lowercased()) }
-                    if !filteredTags.isEmpty {
-                        HStack {
-                            ForEach(filteredTags.prefix(2), id: \.self) { tag in
-                                Text(tag)
-                                    .font(.caption2)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.green.opacity(0.15))
-                                    .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.top, 8)
+                
+                // Product Card
+                HStack(alignment: .top, spacing: 16) {
+                    if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: 72, height: 72)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 72, height: 72)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 72, height: 72)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .foregroundColor(.gray)
+                            @unknown default:
+                                EmptyView()
                             }
                         }
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let name = productInfo.nutrition?.item_name, !name.isEmpty {
+                            Text(name)
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(.black)
+                        }
+//                        if let brand = productInfo.nutrition?.brand_name {
+//                            Text(brand)
+//                                .font(.subheadline)
+//                                .foregroundColor(.gray)
+//                        }
+                        if let ecoScore = productInfo.ecoScoreGrade {
+                            Text("Eco-Friendly")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(Color.green)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Spacer()
                 }
-                // Allergen Alerts
+                .padding()
+                .background(Color.white)
+                .cornerRadius(18)
+                .shadow(color: Color(.systemGray4).opacity(0.12), radius: 8, x: 0, y: 2)
+                .padding(.horizontal)
+                
+                // Carbon Footprint Card
+                if let carbon = productInfo.carbon {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Carbon Footprint")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("\(Int(carbon.co2e))g")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.black)
+                            Text("CO₂e")
+                                .font(.title3)
+                                .foregroundColor(.gray)
+                        }
+                        HStack(spacing: 0) {
+                            VStack {
+                                Text("Production")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("60%")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                            }
+                            .frame(maxWidth: .infinity)
+                            VStack {
+                                Text("Packaging")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("25%")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                            }
+                            .frame(maxWidth: .infinity)
+                            VStack {
+                                Text("Transport")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("15%")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(18)
+                    .padding(.horizontal)
+                }
+                
+                // Nutrition Facts Card
+                if let facts = productInfo.nutrition {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Nutrition Facts")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                        HStack(spacing: 16) {
+                            nutritionFactCard(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
+                            nutritionFactCard(label: "Protein", value: "\(facts.nf_protein ?? 0)", unit: "g")
+                        }
+                        HStack(spacing: 16) {
+                            nutritionFactCard(label: "Sugar", value: "\(facts.nf_sugars ?? 0)", unit: "g")
+                            nutritionFactCard(label: "Fat", value: "\(facts.nf_total_fat ?? 0)", unit: "g")
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(18)
+                    .padding(.horizontal)
+                }
+                
+                // Allergen Alert Card
                 if let allergens = productInfo.allergens {
                     let matching = Set(allergens).intersection(selectedAllergens)
                     if !matching.isEmpty {
-                        AllergenAlert(allergens: Array(matching))
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.brown)
+                            Text("Contains: \(matching.sorted().joined(separator: ", "))")
+                                .font(.body.weight(.semibold))
+                                .foregroundColor(.brown)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.yellow.opacity(0.18))
+                        .cornerRadius(14)
+                        .padding(.horizontal)
                     }
                 }
-                // Carbon Footprint
-                CarbonFootprintSection(
-                    carbonResponse: productInfo.carbon,
-                    geminiResult: scannerViewModel?.geminiCarbonResult
-                )
-                // Ingredients Section
-                if let ingredients = productInfo.ingredients, !ingredients.isEmpty {
-                    IngredientsSection(ingredients: ingredients)
-                }
-                // Nutrition Facts
-                NutritionFactsSection(nutritionFacts: productInfo.nutrition)
+                Spacer(minLength: 24)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+            .background(Color(.systemGroupedBackground))
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Product Details")
-        .accessibilityElement(children: .contain)
-        .sheet(isPresented: $showingEcoGradeInfo) {
-            EcoGradeInfoSheet(grade: selectedEcoGrade)
-        }
+        .navigationBarHidden(true)
     }
     
-    private func showEcoGradeInfo(_ grade: String) {
-        selectedEcoGrade = grade
-        showingEcoGradeInfo = true
+    private func nutritionFactCard(label: String, value: String, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                Text(unit)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.gray)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .padding(8)
+        .background(Color.white)
+        .cornerRadius(12)
     }
+    // EcoGradeInfoSheet and other views remain unchanged...
 }
 
 struct EcoGradeInfoSheet: View {
