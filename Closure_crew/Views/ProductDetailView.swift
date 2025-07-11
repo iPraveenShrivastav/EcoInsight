@@ -94,10 +94,10 @@ struct ProductDetailView: View {
                                 .foregroundColor(.black)
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text(String(format: "%.3f", carbon.totalKgCO2e))
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .font(.title2.weight(.semibold))
                                     .foregroundColor(.black)
                                 Text("kg CO₂e")
-                                    .font(.title3)
+                                    .font(.body)
                                     .foregroundColor(.gray)
                             }
                         }
@@ -113,7 +113,7 @@ struct ProductDetailView: View {
                                 .font(.headline)
                                 .foregroundColor(.black)
                             Text(parseCO2eValue(from: carbonString))
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .font(.title2.weight(.semibold))
                                 .foregroundColor(.black)
                         }
                         .padding()
@@ -139,13 +139,12 @@ struct ProductDetailView: View {
                         Text("Nutrition Facts")
                             .font(.headline)
                             .foregroundColor(.black)
-                        HStack(spacing: 16) {
-                            nutritionFactCard(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
-                            nutritionFactCard(label: "Protein", value: "\(facts.nf_protein ?? 0)", unit: "g")
-                        }
-                        HStack(spacing: 16) {
-                            nutritionFactCard(label: "Sugar", value: "\(facts.nf_sugars ?? 0)", unit: "g")
-                            nutritionFactCard(label: "Fat", value: "\(facts.nf_total_fat ?? 0)", unit: "g")
+                        let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
+                        LazyVGrid(columns: gridItems, spacing: 16) {
+                            nutritionFactGridCell(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
+                            nutritionFactGridCell(label: "Protein", value: "\(facts.nf_protein ?? 0)", unit: "g")
+                            nutritionFactGridCell(label: "Sugar", value: "\(facts.nf_sugars ?? 0)", unit: "g")
+                            nutritionFactGridCell(label: "Fat", value: "\(facts.nf_total_fat ?? 0)", unit: "g")
                         }
                     }
                     .padding()
@@ -167,9 +166,10 @@ struct ProductDetailView: View {
                             Text("Contains: \(matching.sorted().joined(separator: ", ").capitalized)")
                                 .font(.body.weight(.semibold))
                                 .foregroundColor(.brown)
+                                .multilineTextAlignment(.leading)
                         }
                         .padding()
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.yellow.opacity(0.18))
                         .cornerRadius(14)
                         .padding(.horizontal)
@@ -323,6 +323,25 @@ Product details:
         return nil
     }
     // EcoGradeInfoSheet and other views remain unchanged...
+}
+
+extension ProductDetailView {
+    func nutritionFactGridCell(label: String, value: String, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.black)
+                Text(unit)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 struct EcoGradeInfoSheet: View {

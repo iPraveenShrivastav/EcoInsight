@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AllergensPreferencesView: View {
     @Environment(\.presentationMode) private var presentationMode
+    @AppStorage("selectedAllergens") private var selectedAllergensString: String = ""
     @State private var selectedAllergens: Set<String> = []
     @State private var customAllergen: String = ""
     @State private var showSustainableOnly: Bool = true
@@ -69,24 +70,30 @@ struct AllergensPreferencesView: View {
                 }
                 // Show custom allergens as bubbles with remove "x"
                 if !selectedAllergens.subtracting(commonAllergens.map { $0.0 }).isEmpty {
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                        ForEach(Array(selectedAllergens.subtracting(commonAllergens.map { $0.0 })), id: \.self) { allergen in
-                            HStack(spacing: 6) {
-                                Text(allergen)
-                                Button(action: {
-                                    selectedAllergens.remove(allergen)
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.white)
-                                        .font(.caption)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 12) {
+                            ForEach(Array(selectedAllergens.subtracting(commonAllergens.map { $0.0 })).sorted(), id: \.self) { allergen in
+                                HStack(spacing: 6) {
+                                    Text(allergen)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .frame(minWidth: 44, maxWidth: 120, minHeight: 24)
+                                    Button(action: {
+                                        selectedAllergens.remove(allergen)
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.white)
+                                            .font(.caption)
+                                    }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .clipShape(Capsule())
                         }
+                        .padding(.vertical, 4)
                     }
                 }
                 // Sustainable Alternatives Toggle
@@ -110,6 +117,15 @@ struct AllergensPreferencesView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Allergens & Preferences")
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            // Load from storage
+            let saved = selectedAllergensString.split(separator: ",").map { String($0) }
+            selectedAllergens = Set(saved)
+        }
+        .onChange(of: selectedAllergens) { newValue in
+            // Save to storage
+            selectedAllergensString = newValue.joined(separator: ",")
+        }
     }
 }
 

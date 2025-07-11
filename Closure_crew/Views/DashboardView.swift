@@ -3,14 +3,13 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var historyViewModel: HistoryViewModel
     @State private var showingEarthView = false
-    @State private var showAllergensPreferences = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Allergens & Preferences Card/Button
-                    Button(action: { showAllergensPreferences = true }) {
+                    // Allergens & Preferences Card as NavigationLink
+                    NavigationLink(destination: AllergensPreferencesView()) {
                         DashboardCard(
                             title: "Allergens & Preferences",
                             subtitle: "Set your allergens and sustainability preferences",
@@ -108,9 +107,6 @@ struct DashboardView: View {
                 .padding()
             }
             .navigationTitle("EcoScan")
-            .sheet(isPresented: $showAllergensPreferences) {
-                AllergensPreferencesView()
-            }
         }
     }
     
