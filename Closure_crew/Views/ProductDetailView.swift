@@ -1,11 +1,18 @@
+import Foundation
 import SwiftUI
 
 struct ProductDetailView: View {
     let productInfo: ProductInfo
     var scannerViewModel: ScannerViewModel? = nil
+    var onBack: (() -> Void)? = nil
     @AppStorage("selectedAllergens") private var selectedAllergensRaw: String = ""
     @State private var showingEcoGradeInfo = false
     @State private var selectedEcoGrade: String = ""
+    @State private var carbonResult: CarbonFootprintResult?
+    @State private var carbonString: String? // fallback for string result
+    @State private var isLoadingCarbon = false
+    @State private var carbonError: String?
+    @Environment(\.presentationMode) private var presentationMode
     
     private var selectedAllergens: Set<String> {
         get { Set(selectedAllergensRaw.split(separator: ",").map { String($0) }) }
@@ -15,23 +22,7 @@ struct ProductDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header
-                HStack {
-                    Button(action: { /* handle back */ }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2.bold())
-                            .foregroundColor(.black)
-                    }
-                    Spacer()
-                    Text("Product Insights")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.black)
-                    Spacer()
-                    Color.clear.frame(width: 32) // for symmetry
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                
+                // REMOVE custom header HStack with chevron and title (if still present)
                 // Product Card
                 HStack(alignment: .top, spacing: 16) {
                     if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
@@ -67,79 +58,81 @@ struct ProductDetailView: View {
                                 .font(.system(size: 20, weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                         }
-//                        if let brand = productInfo.nutrition?.brand_name {
-//                            Text(brand)
-//                                .font(.subheadline)
-//                                .foregroundColor(.gray)
-//                        }
-                        if let ecoScore = productInfo.ecoScoreGrade {
-                            Text("Eco-Friendly")
+                        // Show eco-friendly label under product name
+                        if let label = ecoFriendlyLabel(), !label.isEmpty {
+                            Text(label)
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
-                                .background(Color.green)
+                                .background(label == "Eco-Friendly" ? Color.green : Color.red)
                                 .clipShape(Capsule())
                         }
                     }
                     Spacer()
                 }
                 .padding()
-                .background(Color.white)
-                .cornerRadius(18)
-                .shadow(color: Color(.systemGray4).opacity(0.12), radius: 8, x: 0, y: 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .cornerRadius(15)
+                .shadow(radius: 5)
                 .padding(.horizontal)
-                
-                // Carbon Footprint Card
-                if let carbon = productInfo.carbon {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Carbon Footprint")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("\(Int(carbon.co2e))g")
+                // Carbon Footprint Card (always in card)
+                Group {
+                    if isLoadingCarbon {
+                        ProgressView("Loading carbon data...")
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(15)
+                            .shadow(radius: 5)
+                            .padding(.horizontal)
+                    } else if let carbon = carbonResult {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Carbon Footprint")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(String(format: "%.3f", carbon.totalKgCO2e))
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.black)
+                                Text("kg CO₂e")
+                                    .font(.title3)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(15)
+                        .shadow(radius: 5)
+                        .padding(.horizontal)
+                    } else if let carbonString = carbonString {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Carbon Footprint")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                            Text(parseCO2eValue(from: carbonString))
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
-                            Text("CO₂e")
-                                .font(.title3)
-                                .foregroundColor(.gray)
                         }
-                        HStack(spacing: 0) {
-                            VStack {
-                                Text("Production")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text("60%")
-                                    .font(.headline)
-                                    .foregroundColor(.green)
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack {
-                                Text("Packaging")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text("25%")
-                                    .font(.headline)
-                                    .foregroundColor(.green)
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack {
-                                Text("Transport")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text("15%")
-                                    .font(.headline)
-                                    .foregroundColor(.green)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(15)
+                        .shadow(radius: 5)
+                        .padding(.horizontal)
+                    } else if let error = carbonError {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(15)
+                            .shadow(radius: 5)
+                            .padding(.horizontal)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(18)
-                    .padding(.horizontal)
                 }
-                
                 // Nutrition Facts Card
                 if let facts = productInfo.nutrition {
                     VStack(alignment: .leading, spacing: 16) {
@@ -156,11 +149,32 @@ struct ProductDetailView: View {
                         }
                     }
                     .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(18)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
                     .padding(.horizontal)
                 }
-                
+                // Allergen Warning Card (based on ingredients)
+                if let userAllergensRaw = UserDefaults.standard.string(forKey: "selectedAllergens"),
+                   !userAllergensRaw.isEmpty {
+                    let userAllergens = Set(userAllergensRaw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+                    let productIngredients = (productInfo.ingredients ?? "").lowercased()
+                    let matching = userAllergens.filter { productIngredients.contains($0) }
+                    if !matching.isEmpty {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("Contains: \(matching.sorted().joined(separator: ", ").capitalized)")
+                                .font(.body.weight(.semibold))
+                                .foregroundColor(.brown)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.yellow.opacity(0.18))
+                        .cornerRadius(14)
+                        .padding(.horizontal)
+                    }
+                }
                 // Allergen Alert Card
                 if let allergens = productInfo.allergens {
                     let matching = Set(allergens).intersection(selectedAllergens)
@@ -183,9 +197,92 @@ struct ProductDetailView: View {
             }
             .padding(.top, 8)
             .padding(.bottom, 8)
-            .background(Color(.systemGroupedBackground))
+            // No background color here; let system default show through
         }
-        .navigationBarHidden(true)
+        .navigationTitle("Product Insights")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            Task {
+                await fetchCarbonResult()
+            }
+        }
+    }
+    
+    private func fetchCarbonResult() async {
+        guard let scannerViewModel = scannerViewModel else { return }
+        isLoadingCarbon = true
+        carbonError = nil
+        carbonResult = nil
+        carbonString = nil
+        do {
+            // Check if product is in history and has a carbon value
+            if let historyProduct = scannerViewModel.historyViewModel.scannedProducts.first(where: { $0.code == productInfo.barcode }),
+               let savedValue = historyProduct.geminiCarbonResult, !savedValue.isEmpty {
+                carbonString = savedValue
+                isLoadingCarbon = false
+                return
+            }
+            let prompt = """
+Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product. Also, provide an eco-friendly label (Eco-Friendly or Not Eco-Friendly). Use the product's packaging, ingredients, quantity, and ecoScoreGrade to make your estimate. Do not use a default value. If information is missing, make your best estimate based on what is provided. Carefully analyze the provided product details. Your answer must be based on these details. Return the result in the following JSON format:
+{
+  \"total_kg_co2e\": <number, e.g. 0.15>,
+  \"eco_friendly_label\": \"<Eco-Friendly or Not Eco-Friendly>\"
+}
+Product details:
+- Name: \(productInfo.nutrition?.item_name ?? "")
+- Packaging: \(productInfo.packaging ?? "")
+- Ingredients: \(productInfo.ingredients ?? "")
+- Quantity: \(productInfo.quantity ?? "")
+- EcoScore Grade: \(productInfo.ecoScoreGrade ?? "")
+"""
+            let response = try await scannerViewModel.geminiService.sendPrompt(prompt)
+            print("Gemini raw response for \(productInfo.nutrition?.item_name ?? ""): \n\(response)")
+            if let jsonString = extractJSON(from: response),
+               let data = jsonString.data(using: String.Encoding.utf8) {
+                let decoder = JSONDecoder()
+                if let result = try? decoder.decode(CarbonFootprintResult.self, from: data) {
+                    carbonResult = result
+                    // Save to history in kg
+                    scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: String(format: "%.2f kg CO₂e", result.totalKgCO2e))
+                } else if let value = extractFinalCO2e(from: response) {
+                    carbonString = value
+                    scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+                } else {
+                    carbonString = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            } else if let value = extractFinalCO2e(from: response) {
+                carbonString = value
+                scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+            } else {
+                carbonString = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } catch {
+            carbonError = error.localizedDescription
+        }
+        isLoadingCarbon = false
+    }
+    // Helper to extract JSON from Gemini response
+    private func extractJSON(from text: String) -> String? {
+        guard let start = text.firstIndex(of: "{"),
+              let end = text.lastIndex(of: "}") else { return nil }
+        return String(text[start...end])
+    }
+    // Helper to extract the final CO2e value from Gemini response
+    private func extractFinalCO2e(from response: String) -> String? {
+        let lines = response.components(separatedBy: .newlines)
+        for line in lines.reversed() {
+            if line.lowercased().contains("total carbon footprint:") {
+                let pattern = #"([0-9]+\.?[0-9]*)\s*kg\s*CO[2₂]e"#
+                if let match = line.range(of: pattern, options: .regularExpression) {
+                    return String(line[match])
+                }
+            }
+        }
+        let pattern = #"([0-9]+\.?[0-9]*)\s*kg\s*CO[2₂]e"#
+        if let match = response.range(of: pattern, options: .regularExpression) {
+            return String(response[match])
+        }
+        return nil
     }
     
     private func nutritionFactCard(label: String, value: String, unit: String) -> some View {
@@ -206,6 +303,24 @@ struct ProductDetailView: View {
         .padding(8)
         .background(Color.white)
         .cornerRadius(12)
+    }
+    // Add this helper to parse only the value from a JSON string or code block
+    private func parseCO2eValue(from string: String) -> String {
+        return string
+    }
+    // Add this helper to determine the eco-friendly label
+    private func ecoFriendlyLabel() -> String? {
+        if let label = carbonResult?.ecoFriendlyLabel, !label.isEmpty {
+            return label
+        }
+        // Fallback: check packaging
+        let packaging = productInfo.packaging?.lowercased() ?? ""
+        if packaging.contains("plastic") {
+            return "Not Eco-Friendly"
+        } else if !packaging.isEmpty {
+            return "Eco-Friendly"
+        }
+        return nil
     }
     // EcoGradeInfoSheet and other views remain unchanged...
 }

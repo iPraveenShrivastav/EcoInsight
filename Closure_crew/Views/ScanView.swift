@@ -7,13 +7,14 @@ let GEMINI_API_KEY = "AIzaSyChk26SFhMAhZIUVMnYNPwXdoREpT1iUg0"
 struct ScanView: View {
     @StateObject private var scannerViewModel: ScannerViewModel
     @State private var showingScanner = false
+    @State private var selectedProduct: ProductInfo? = nil
     
     init(historyViewModel: HistoryViewModel) {
         _scannerViewModel = StateObject(wrappedValue: ScannerViewModel(historyViewModel: historyViewModel))
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Background
                 Color(.systemBackground)
@@ -24,10 +25,8 @@ struct ScanView: View {
                         loadingView
                     } else if let error = scannerViewModel.error {
                         errorView(error)
-                    } else if let productInfo = scannerViewModel.productInfo {
-                        ProductDetailView(productInfo: productInfo, scannerViewModel: scannerViewModel)
                     } else {
-                        scannerReadyView
+                        scanLandingView
                     }
                 }
             }
@@ -35,6 +34,17 @@ struct ScanView: View {
                 BarcodeScannerView(scannedCode: $scannerViewModel.scannedCode)
             }
             .navigationTitle("Scan")
+            .onChange(of: scannerViewModel.productInfo) { newProduct in
+                if let info = newProduct {
+                    selectedProduct = info
+                }
+            }
+            .navigationDestination(item: $selectedProduct) { product in
+                ProductDetailView(productInfo: product, scannerViewModel: scannerViewModel, onBack: {
+                    selectedProduct = nil
+                    scannerViewModel.productInfo = nil
+                })
+            }
         }
     }
     
@@ -78,98 +88,34 @@ struct ScanView: View {
                     .background(Color.green)
                     .cornerRadius(12)
             }
-            .padding(.top, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Error: \(error)")
     }
     
-    private var scannerReadyView: some View {
-        VStack(spacing: 0) {
-            // Camera preview area
-            ZStack {
-                Color(.systemBackground)
-                    .edgesIgnoringSafeArea(.all)
-                
-                RoundedRectangle(cornerRadius: 24)
-                    .strokeBorder(Color.green.opacity(0.3), lineWidth: 2)
-                    .frame(width: UIScreen.main.bounds.width * 0.85,
-                           height: UIScreen.main.bounds.width * 0.85)
-                    .background(Color.black.opacity(0.02))
-                
-                // Scan frame corners
-                ZStack {
-                    // Top left corner
-                    Path { path in
-                        path.move(to: CGPoint(x: 0, y: 40))
-                        path.addLine(to: CGPoint(x: 0, y: 0))
-                        path.addLine(to: CGPoint(x: 40, y: 0))
-                    }
-                    .stroke(Color.green, lineWidth: 4)
-                    
-                    // Other corners...
-                }
-                .frame(width: UIScreen.main.bounds.width * 0.85,
-                       height: UIScreen.main.bounds.width * 0.85)
-            }
-            .frame(height: UIScreen.main.bounds.height * 0.6)
-            
-            Spacer(minLength: 0)
-            
-            // Bottom controls
-            VStack(spacing: 24) {
-                Text("Scan Product Barcode")
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(.primary)
-                
-                Text("Position barcode within the frame")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                HStack(spacing: 40) {
-                    Button(action: {}) {
-                        Image(systemName: "flashlight.off.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.secondary)
-                            .frame(width: 56, height: 56)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
-                    }
-                    
+    private var scanLandingView: some View {
+        VStack(spacing: 32) {
+            Spacer()
+            Image(systemName: "barcode.viewfinder")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 100)
+                .foregroundColor(.green)
+            Text("Ready to scan a product?")
+                .font(.title2)
+                .fontWeight(.semibold)
                     Button(action: { showingScanner = true }) {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 32))
+                Text("Scan Product")
+                    .font(.headline)
                             .foregroundColor(.white)
-                            .frame(width: 72, height: 72)
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 40)
                             .background(Color.green)
-                            .clipShape(Circle())
-                            .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .cornerRadius(14)
                     }
-                    
-                    Button(action: {}) {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 24))
-                            .foregroundColor(.secondary)
-                            .frame(width: 56, height: 56)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
+            Spacer()
                     }
-                }
-                .padding(.top, 24)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
-            .frame(maxWidth: .infinity)
-            .background(
-                Color(.systemBackground)
-                    .edgesIgnoringSafeArea(.bottom)
-            )
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 24)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Ready to scan product barcode")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

@@ -70,11 +70,18 @@ struct HistoryView: View {
     @State private var showingClearConfirmation = false
     @State private var showingEcoGradeInfo = false
     @State private var selectedEcoGrade: String = ""
+    @State private var showShareSheet = false
+
+    var totalCO2Saved: Double {
+        // Example: sum of all negative carbon values (if any), else 0
+        viewModel.scannedProducts.compactMap { parseCO2Value($0.geminiCarbonResult ?? $0.carbonFootprint) }.reduce(0, +)
+    }
 
     var body: some View {
         NavigationView {
-            Group {
+            VStack(spacing: 0) {
                 if viewModel.scannedProducts.isEmpty {
+                    Spacer()
                     VStack(spacing: 20) {
                         Image(systemName: "barcode.viewfinder")
                             .font(.system(size: 60))
@@ -89,30 +96,116 @@ struct HistoryView: View {
                             .padding(.horizontal)
                     }
                     .padding()
+                    Spacer()
                 } else {
-                    List {
-                        ForEach(viewModel.scannedProducts) { product in
-                            ProductHistoryRow(
-                                product: product,
-                                selectedEcoGrade: $selectedEcoGrade,
-                                showingEcoGradeInfo: $showingEcoGradeInfo
-                            )
+                    VStack(spacing: 20) {
+                        // Your Impact Card (fixed)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Your Impact")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                Text("Total CO₂e Saved")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.black)
+                            }
+                            Spacer()
+                            Button(action: { showShareSheet = true }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("Share Impact")
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.green.opacity(0.15))
+                                .foregroundColor(.green)
+                                .clipShape(Capsule())
+                            }
+                            .sheet(isPresented: $showShareSheet) {
+                                ActivityView(activityItems: ["I've saved \(String(format: "%.2f", totalCO2Saved)) kg using EcoScan!"])
+                            }
                         }
-                        .onDelete(perform: viewModel.deleteProduct)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(18)
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        .padding(.horizontal)
+
+                        // Recent Scans Header
+                        HStack {
+                            Text("Recent Scans")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+
+                        // Only this section scrolls
+                        ScrollView {
+                            VStack(spacing: 14) {
+                                ForEach(viewModel.scannedProducts) { product in
+                                    HStack(spacing: 16) {
+                                        if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
+                                            AsyncImage(url: url) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            } placeholder: {
+                                                Color(.systemGray5)
+                                            }
+                                            .frame(width: 48, height: 48)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        } else {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(Color.green.opacity(0.12))
+                                                    .frame(width: 48, height: 48)
+                                                Image(systemName: "cart.fill")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 28, height: 28)
+                                                    .foregroundColor(.green)
+                                            }
+                                        }
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(product.name)
+                                                .font(.headline)
+                                                .foregroundColor(.black)
+                                            Text(scanTimeString(for: product.scannedAt))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        VStack(alignment: .trailing) {
+                                            Text(co2String(for: product))
+                                                .font(.headline)
+                                                .foregroundColor(.green)
+                                        }
+                                    }
+                                    .padding()
+                                    .background(Color.white)
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                                    .padding(.horizontal)
+                                }
+                            }
+                            .padding(.bottom, 16)
+                        }
                     }
-                    .listStyle(InsetGroupedListStyle())
-                    .toolbar {
-                        EditButton()
-                    }
+                    .padding(.top, 12)
                 }
             }
-            .navigationTitle("History")
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("History & Impact")
             .toolbar {
-                if !viewModel.scannedProducts.isEmpty {
-                    Button(action: {
-                        showingClearConfirmation = true
-                    }) {
-                        Text("Clear All")
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !viewModel.scannedProducts.isEmpty {
+                        Button("Clear All") { showingClearConfirmation = true }
                     }
                 }
             }
@@ -130,13 +223,39 @@ struct HistoryView: View {
         }
     }
 
-    // Helper to get the correct carbon emission (Gemini or API)
-    func getCarbonEmission(for product: Product) -> String? {
-        // If you have a way to access the Gemini result for this product, return it here.
-        // For now, just return product.carbonFootprint.
-        // You can enhance this to use a cache or lookup if needed.
-        return product.carbonFootprint
+    func parseCO2Value(_ value: String?) -> Double? {
+        guard let value = value else { return nil }
+        let cleaned = value.replacingOccurrences(of: "kg CO₂e", with: "").replacingOccurrences(of: "kg CO2e", with: "").replacingOccurrences(of: "kg CO2", with: "").trimmingCharacters(in: .whitespaces)
+        return Double(cleaned)
     }
+
+    func co2String(for product: Product) -> String {
+        let value = parseCO2Value(product.geminiCarbonResult ?? product.carbonFootprint) ?? 0
+        if value == 0 {
+            return "0 kg CO₂e"
+        } else {
+            return String(format: "%.2f kg CO₂e", value)
+        }
+    }
+
+    func scanTimeString(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
+        return formatter.string(from: date)
+    }
+}
+
+// Share Sheet Helper
+import UIKit
+struct ActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct HistoryView_Previews: PreviewProvider {

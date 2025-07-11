@@ -12,8 +12,10 @@ struct Product: Identifiable, Codable {
     let ecoScoreGrade: String?
     let environmentalImpact: EnvironmentalImpact
     var geminiCarbonResult: String?
+    let scannedAt: Date
+    let imageUrl: String?
     
-    init(code: String, name: String, packaging: String, packagingTags: [String], carbonFootprint: String, ecoScore: String? = nil, ecoScoreGrade: String? = nil, geminiCarbonResult: String? = nil) {
+    init(code: String, name: String, packaging: String, packagingTags: [String], carbonFootprint: String, ecoScore: String? = nil, ecoScoreGrade: String? = nil, geminiCarbonResult: String? = nil, scannedAt: Date = Date(), imageUrl: String? = nil) {
         self.id = UUID()
         self.code = code
         self.name = name
@@ -23,6 +25,8 @@ struct Product: Identifiable, Codable {
         self.ecoScore = ecoScore
         self.ecoScoreGrade = ecoScoreGrade
         self.geminiCarbonResult = geminiCarbonResult
+        self.scannedAt = scannedAt
+        self.imageUrl = imageUrl
         
         // Calculate environmental impact
         let isRecyclable = packagingTags.contains("recyclable")

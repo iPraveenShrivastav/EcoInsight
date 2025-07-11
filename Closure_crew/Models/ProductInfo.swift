@@ -1,6 +1,6 @@
 import Foundation
 
-struct ProductInfo: Identifiable {
+struct ProductInfo: Identifiable, Hashable, Equatable {
     let id = UUID()
     let barcode: String
     var nutrition: NutritionFacts?
@@ -12,6 +12,14 @@ struct ProductInfo: Identifiable {
     var quantity: String?
     var packaging: String?
     var packagingTags: [String]?
+
+    static func == (lhs: ProductInfo, rhs: ProductInfo) -> Bool {
+        lhs.id == rhs.id && lhs.barcode == rhs.barcode
+    }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(barcode)
+    }
 }
 
 struct NutritionFacts: Decodable {

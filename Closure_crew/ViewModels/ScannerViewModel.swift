@@ -14,10 +14,10 @@ class ScannerViewModel: ObservableObject {
     @Published var error: String?
     @Published var geminiCarbonResult: String?
     
-    private let historyViewModel: HistoryViewModel
-    private let productService = ProductService()
-    private let nutritionService = NutritionService()
-    private let geminiService = GeminiService(apiKey: "AIzaSyBFPSpiWUNLvL390wzHI0NUyN7ZDsh5EV0")
+    let historyViewModel: HistoryViewModel
+    let productService = ProductService()
+    let nutritionService = NutritionService()
+    let geminiService = GeminiService(apiKey: "AIzaSyBFPSpiWUNLvL390wzHI0NUyN7ZDsh5EV0")
     
     init(historyViewModel: HistoryViewModel) {
         self.historyViewModel = historyViewModel
@@ -93,7 +93,9 @@ class ScannerViewModel: ObservableObject {
                     carbonFootprint: product.carbonFootprint,
                     ecoScore: product.ecoScore,
                     ecoScoreGrade: product.ecoScoreGrade,
-                    geminiCarbonResult: geminiResult
+                    geminiCarbonResult: geminiResult,
+                    scannedAt: Date(),
+                    imageUrl: info.productImageUrl
                 )
                 self.historyViewModel.addScan(productForHistory)
                 
@@ -134,5 +136,17 @@ class ScannerViewModel: ObservableObject {
     // For testing
     func testScan(barcode: String) {
         self.scannedCode = barcode
+    }
+}
+
+extension ScannerViewModel {
+    func saveCarbonResultToHistory(for productInfo: ProductInfo, value: String) {
+        if let index = historyViewModel.scannedProducts.firstIndex(where: { $0.code == productInfo.barcode }) {
+            var product = historyViewModel.scannedProducts[index]
+            product.geminiCarbonResult = value
+            historyViewModel.deleteProduct(product)
+            historyViewModel.addScan(product)
+        }
+        // If not in history, add a new Product (optional, depending on your flow)
     }
 }
