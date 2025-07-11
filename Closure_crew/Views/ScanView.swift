@@ -9,6 +9,37 @@ struct ScanView: View {
     @State private var showingScanner = false
     @State private var selectedProduct: ProductInfo? = nil
     
+    // Hardcoded alternatives for Häagen‑Dazs Vanilla Ice Cream
+    private let haagenDazsAlternatives = [
+        AlternativeProduct(
+            name: "Oatly Vanilla Frozen Dessert",
+            brandOrType: "Plant-based dessert · Frozen foods",
+            imageUrl: "https://world.openfoodfacts.org/images/products/17988807/front_en.8.full.jpg",
+            description: "Gluten-free, Dairy-free, Egg-free, Soy-free, Nut-free",
+            nutrition: nil,
+            allergens: [],
+            barcode: "17988807"
+        ),
+        AlternativeProduct(
+            name: "Alpro Vanilla Flavoured Plant-Based Dessert",
+            brandOrType: "Plant-based dessert",
+            imageUrl: "https://world.openfoodfacts.org/images/products/541/118/811/0521/front_en.10.full.jpg",
+            description: "Contains soy; Dairy-free, Egg-free",
+            nutrition: nil,
+            allergens: ["soy"],
+            barcode: "5411188110521"
+        ),
+        AlternativeProduct(
+            name: "Vanilla Bean Non‑Dairy Frozen Dessert – Nora’s",
+            brandOrType: "Cashew & coconut cream base",
+            imageUrl: "https://world.openfoodfacts.org/images/products/062/784/381/4238/front_en.8.full.jpg",
+            description: "Contains tree nuts (cashews), no dairy or eggs",
+            nutrition: nil,
+            allergens: ["cashew"],
+            barcode: "0627843814238"
+        )
+    ]
+    
     init(historyViewModel: HistoryViewModel) {
         _scannerViewModel = StateObject(wrappedValue: ScannerViewModel(historyViewModel: historyViewModel))
     }
@@ -40,10 +71,22 @@ struct ScanView: View {
                 }
             }
             .navigationDestination(item: $selectedProduct) { product in
-                ProductDetailView(productInfo: product, scannerViewModel: scannerViewModel, onBack: {
-                    selectedProduct = nil
-                    scannerViewModel.productInfo = nil
-                })
+                let normalizedBarcode = product.barcode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let validBarcodes = ["055000205528", "0055000205528"]
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                let showAlternatives = validBarcodes.contains(normalizedBarcode)
+                return ProductDetailView(
+                    productInfo: product,
+                    scannerViewModel: scannerViewModel,
+                    onBack: {
+                        selectedProduct = nil
+                        scannerViewModel.productInfo = nil
+                    },
+                    alternatives: showAlternatives ? haagenDazsAlternatives : nil
+                )
+                .onAppear {
+                    print("Scanned barcode: \(product.barcode)")
+                }
             }
         }
     }

@@ -79,127 +79,129 @@ struct HistoryView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if viewModel.scannedProducts.isEmpty {
-                    Spacer()
-                    VStack(spacing: 20) {
-                        Image(systemName: "barcode.viewfinder")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        Text("No Products Scanned Yet")
-                            .font(.title2)
-                            .foregroundColor(.gray)
-                        Text("Start scanning products to track their environmental impact")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding()
-                    Spacer()
-                } else {
-                    VStack(spacing: 20) {
-                        // Your Impact Card (fixed)
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Your Impact")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                                Text("Total CO₂e Saved")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.black)
-                            }
-                            Spacer()
-                            Button(action: { showShareSheet = true }) {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text("Share Impact")
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.green.opacity(0.15))
-                                .foregroundColor(.green)
-                                .clipShape(Capsule())
-                            }
-                            .sheet(isPresented: $showShareSheet) {
-                                ActivityView(activityItems: ["I've saved \(String(format: "%.2f", totalCO2Saved)) kg using EcoScan!"])
-                            }
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+                VStack(spacing: 0) {
+                    if viewModel.scannedProducts.isEmpty {
+                        Spacer()
+                        VStack(spacing: 20) {
+                            Image(systemName: "barcode.viewfinder")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray)
+                            Text("No Products Scanned Yet")
+                                .font(.title2)
+                                .foregroundColor(.gray)
+                            Text("Start scanning products to track their environmental impact")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
                         }
                         .padding()
-                        .background(Color.white)
-                        .cornerRadius(18)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        .padding(.horizontal)
+                        Spacer()
+                    } else {
+                        VStack(spacing: 20) {
+                            // Your Impact Card (fixed)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Your Impact")
+                                        .font(.headline)
+                                        .foregroundColor(.black)
+                                    Text("Total CO₂e Saved")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.black)
+                                }
+                                Spacer()
+                                Button(action: { showShareSheet = true }) {
+                                    HStack {
+                                        Image(systemName: "square.and.arrow.up")
+                                        Text("Share Impact")
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(Color.green.opacity(0.15))
+                                    .foregroundColor(.green)
+                                    .clipShape(Capsule())
+                                }
+                                .sheet(isPresented: $showShareSheet) {
+                                    ActivityView(activityItems: ["I've saved \(String(format: "%.2f", totalCO2Saved)) kg using EcoScan!"])
+                                }
+                            }
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(18)
+                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                            .padding(.horizontal)
 
-                        // Recent Scans Header
-                        HStack {
-                            Text("Recent Scans")
-                                .font(.headline)
-                                .foregroundColor(.black)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
+                            // Recent Scans Header
+                            HStack {
+                                Text("Recent Scans")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
 
-                        // Only this section scrolls
-                        ScrollView {
-                            VStack(spacing: 14) {
-                                ForEach(viewModel.scannedProducts) { product in
-                                    HStack(spacing: 16) {
-                                        if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
-                                            AsyncImage(url: url) { image in
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            } placeholder: {
-                                                Color(.systemGray5)
+                            // Only this section scrolls
+                            ScrollView {
+                                VStack(spacing: 14) {
+                                    ForEach(viewModel.scannedProducts) { product in
+                                        HStack(spacing: 16) {
+                                            if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
+                                                AsyncImage(url: url) { image in
+                                                    image
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                } placeholder: {
+                                                    Color(.systemGray5)
+                                                }
+                                                .frame(width: 48, height: 48)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            } else {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .fill(Color.green.opacity(0.12))
+                                                        .frame(width: 48, height: 48)
+                                                    Image(systemName: "cart.fill")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 28, height: 28)
+                                                        .foregroundColor(.green)
+                                                }
                                             }
-                                            .frame(width: 48, height: 48)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        } else {
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color.green.opacity(0.12))
-                                                    .frame(width: 48, height: 48)
-                                                Image(systemName: "cart.fill")
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 28, height: 28)
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(product.name)
+                                                    .font(.headline)
+                                                    .foregroundColor(.black)
+                                                Text(scanTimeString(for: product.scannedAt))
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            Spacer()
+                                            VStack(alignment: .trailing) {
+                                                Text(co2String(for: product))
+                                                    .font(.headline)
                                                     .foregroundColor(.green)
                                             }
                                         }
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(product.name)
-                                                .font(.headline)
-                                                .foregroundColor(.black)
-                                            Text(scanTimeString(for: product.scannedAt))
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        Spacer()
-                                        VStack(alignment: .trailing) {
-                                            Text(co2String(for: product))
-                                                .font(.headline)
-                                                .foregroundColor(.green)
-                                        }
+                                        .padding()
+                                        .background(Color.white)
+                                        .cornerRadius(16)
+                                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                                        .padding(.horizontal)
                                     }
-                                    .padding()
-                                    .background(Color.white)
-                                    .cornerRadius(16)
-                                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
-                                    .padding(.horizontal)
                                 }
+                                .padding(.bottom, 16)
                             }
-                            .padding(.bottom, 16)
                         }
+                        .padding(.top, 12)
                     }
-                    .padding(.top, 12)
                 }
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationBarTitleDisplayMode(.large)
             .navigationTitle("History & Impact")
             .toolbar {

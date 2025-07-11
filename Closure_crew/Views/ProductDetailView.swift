@@ -1,6 +1,17 @@
 import Foundation
 import SwiftUI
 
+struct AlternativeProduct: Identifiable {
+    let id = UUID()
+    let name: String
+    let brandOrType: String
+    let imageUrl: String
+    let description: String
+    let nutrition: [String: String]?
+    let allergens: [String]?
+    let barcode: String
+}
+
 struct ProductDetailView: View {
     let productInfo: ProductInfo
     var scannerViewModel: ScannerViewModel? = nil
@@ -13,6 +24,10 @@ struct ProductDetailView: View {
     @State private var isLoadingCarbon = false
     @State private var carbonError: String?
     @Environment(\.presentationMode) private var presentationMode
+    var alternatives: [AlternativeProduct]? = nil
+    var isAlternative: Bool = false
+    @State private var altDetailProduct: ProductInfo? = nil
+    @State private var isLoadingAlt: Bool = false
     
     private var selectedAllergens: Set<String> {
         get { Set(selectedAllergensRaw.split(separator: ",").map { String($0) }) }
@@ -22,177 +37,11 @@ struct ProductDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // REMOVE custom header HStack with chevron and title (if still present)
-                // Product Card
-                HStack(alignment: .top, spacing: 16) {
-                    if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 72, height: 72)
-                                    .background(Color(.systemGray6))
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 72, height: 72)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                            case .failure:
-                                Image(systemName: "photo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 72, height: 72)
-                                    .background(Color(.systemGray6))
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    .foregroundColor(.gray)
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let name = productInfo.nutrition?.item_name, !name.isEmpty {
-                            Text(name)
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.black)
-                        }
-                        // Show eco-friendly label under product name
-                        if let label = ecoFriendlyLabel(), !label.isEmpty {
-                            Text(label)
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(label == "Eco-Friendly" ? Color.green : Color.red)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    Spacer()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemBackground))
-                .cornerRadius(15)
-                .shadow(radius: 5)
-                .padding(.horizontal)
-                // Carbon Footprint Card (always in card)
-                Group {
-                    if isLoadingCarbon {
-                        ProgressView("Loading carbon data...")
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
-                            .padding(.horizontal)
-                    } else if let carbon = carbonResult {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Carbon Footprint")
-                                .font(.headline)
-                                .foregroundColor(.black)
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text(String(format: "%.3f", carbon.totalKgCO2e))
-                                    .font(.title2.weight(.semibold))
-                                    .foregroundColor(.black)
-                                Text("kg CO₂e")
-                                    .font(.body)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(15)
-                        .shadow(radius: 5)
-                        .padding(.horizontal)
-                    } else if let carbonString = carbonString {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Carbon Footprint")
-                                .font(.headline)
-                                .foregroundColor(.black)
-                            Text(parseCO2eValue(from: carbonString))
-                                .font(.title2.weight(.semibold))
-                                .foregroundColor(.black)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(15)
-                        .shadow(radius: 5)
-                        .padding(.horizontal)
-                    } else if let error = carbonError {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
-                            .padding(.horizontal)
-                    }
-                }
-                // Nutrition Facts Card
-                if let facts = productInfo.nutrition {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Nutrition Facts")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                        let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
-                        LazyVGrid(columns: gridItems, spacing: 16) {
-                            nutritionFactGridCell(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
-                            nutritionFactGridCell(label: "Protein", value: "\(facts.nf_protein ?? 0)", unit: "g")
-                            nutritionFactGridCell(label: "Sugar", value: "\(facts.nf_sugars ?? 0)", unit: "g")
-                            nutritionFactGridCell(label: "Fat", value: "\(facts.nf_total_fat ?? 0)", unit: "g")
-                        }
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
-                    .padding(.horizontal)
-                }
-                // Allergen Warning Card (based on ingredients)
-                if let userAllergensRaw = UserDefaults.standard.string(forKey: "selectedAllergens"),
-                   !userAllergensRaw.isEmpty {
-                    let userAllergens = Set(userAllergensRaw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
-                    let productIngredients = (productInfo.ingredients ?? "").lowercased()
-                    let matching = userAllergens.filter { productIngredients.contains($0) }
-                    if !matching.isEmpty {
-                        HStack(alignment: .center, spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text("Contains: \(matching.sorted().joined(separator: ", ").capitalized)")
-                                .font(.body.weight(.semibold))
-                                .foregroundColor(.brown)
-                                .multilineTextAlignment(.leading)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.yellow.opacity(0.18))
-                        .cornerRadius(14)
-                        .padding(.horizontal)
-                    }
-                }
-                // Allergen Alert Card
-                if let allergens = productInfo.allergens {
-                    let matching = Set(allergens).intersection(selectedAllergens)
-                    if !matching.isEmpty {
-                        HStack(alignment: .center, spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.brown)
-                            Text("Contains: \(matching.sorted().joined(separator: ", "))")
-                                .font(.body.weight(.semibold))
-                                .foregroundColor(.brown)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.yellow.opacity(0.18))
-                        .cornerRadius(14)
-                        .padding(.horizontal)
-                    }
-                }
+                productCard
+                carbonFootprintCard
+                nutritionFactsCard
+                allergenWarningCard
+                alternativesSection
                 Spacer(minLength: 24)
             }
             .padding(.top, 8)
@@ -201,9 +50,341 @@ struct ProductDetailView: View {
         }
         .navigationTitle("Product Insights")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(item: $altDetailProduct) { altProduct in
+            ProductDetailView(productInfo: altProduct, isAlternative: true)
+        }
         .onAppear {
             Task {
                 await fetchCarbonResult()
+            }
+        }
+    }
+    
+    private var productCard: some View {
+        HStack(alignment: .top, spacing: 16) {
+            if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 72, height: 72)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 72, height: 72)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    case .failure:
+                        Image(systemName: "photo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .foregroundColor(.gray)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            } else {
+                Image(systemName: "photo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .foregroundColor(.gray)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                if let name = productInfo.nutrition?.item_name, !name.isEmpty {
+                    Text(name)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                if let label = ecoFriendlyLabel(), !label.isEmpty {
+                    Text(label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(label == "Eco-Friendly" ? Color.green : Color.red)
+                        .clipShape(Capsule())
+                }
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+        .padding(.horizontal)
+    }
+
+    private var carbonFootprintCard: some View {
+        Group {
+            if isLoadingCarbon {
+                ProgressView("Loading carbon data...")
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
+                    .padding(.horizontal)
+            } else if let carbon = carbonResult {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Carbon Footprint")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(String(format: "%.3f", carbon.totalKgCO2e))
+                            .font(.title2.weight(.semibold))
+                            .foregroundColor(.black)
+                        Text("kg CO₂e")
+                            .font(.body)
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .cornerRadius(15)
+                .shadow(radius: 5)
+                .padding(.horizontal)
+            } else if let carbonString = carbonString {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Carbon Footprint")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                    Text(parseCO2eValue(from: carbonString))
+                        .font(.title2.weight(.semibold))
+                        .foregroundColor(.black)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .cornerRadius(15)
+                .shadow(radius: 5)
+                .padding(.horizontal)
+            } else if let error = carbonError {
+                Text(error)
+                    .foregroundColor(.red)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
+                    .padding(.horizontal)
+            }
+        }
+    }
+
+    private var nutritionFactsCard: some View {
+        Group {
+            if let facts = productInfo.nutrition {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Nutrition Facts")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                    let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
+                    LazyVGrid(columns: gridItems, spacing: 16) {
+                        nutritionFactGridCell(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
+                        nutritionFactGridCell(label: "Protein", value: "\(facts.nf_protein ?? 0)", unit: "g")
+                        nutritionFactGridCell(label: "Sugar", value: "\(facts.nf_sugars ?? 0)", unit: "g")
+                        nutritionFactGridCell(label: "Fat", value: "\(facts.nf_total_fat ?? 0)", unit: "g")
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(15)
+                .shadow(radius: 5)
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private var allergenWarningCard: some View {
+        Group {
+            userAllergensWarning
+            productAllergensWarning
+        }
+    }
+
+    private var userAllergensWarning: some View {
+        Group {
+            if let userAllergensRaw = UserDefaults.standard.string(forKey: "selectedAllergens"),
+               !userAllergensRaw.isEmpty {
+                let userAllergens = Set(userAllergensRaw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+                let productIngredients = (productInfo.ingredients ?? "").lowercased()
+                let matching = userAllergens.filter { productIngredients.contains($0) }
+                if !matching.isEmpty {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Contains: \(matching.sorted().joined(separator: ", ").capitalized)")
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(.brown)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.yellow.opacity(0.18))
+                    .cornerRadius(14)
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+
+    private var productAllergensWarning: some View {
+        Group {
+            if let allergens = productInfo.allergens {
+                let matching = Set(allergens).intersection(selectedAllergens)
+                if !matching.isEmpty {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.brown)
+                        Text("Contains: \(matching.sorted().joined(separator: ", "))")
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(.brown)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.yellow.opacity(0.18))
+                    .cornerRadius(14)
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+
+    private var alternativesSection: some View {
+        Group {
+            if !isAlternative, let alternatives = alternatives, !alternatives.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Eco-Friendly Alternatives")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .padding(.horizontal)
+                    ForEach(alternatives) { alt in
+                        alternativeCard(for: alt)
+                    }
+                }
+            }
+        }
+    }
+
+    private func alternativeCard(for alt: AlternativeProduct) -> some View {
+        AlternativeImageCard(barcode: alt.barcode, name: alt.name, brandOrType: alt.brandOrType, description: alt.description, onViewDetails: {
+            isLoadingAlt = true
+            fetchAlternativeProduct(barcode: alt.barcode)
+        }, isLoading: isLoadingAlt)
+    }
+
+    // New subview for alternative card with image fetched from API
+    struct AlternativeImageCard: View {
+        let barcode: String
+        let name: String
+        let brandOrType: String
+        let description: String
+        let onViewDetails: () -> Void
+        let isLoading: Bool
+        @State private var imageUrl: String? = nil
+        @State private var isLoadingImage = false
+
+        var body: some View {
+            HStack(spacing: 16) {
+                Group {
+                    if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: 64, height: 64)
+                                    .background(Color(.systemGray5))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(1, contentMode: .fill)
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .clipped()
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 64, height: 64)
+                                    .background(Color(.systemGray5))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .foregroundColor(.gray)
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    } else if isLoadingImage {
+                        ProgressView()
+                            .frame(width: 64, height: 64)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        Image(systemName: "photo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .foregroundColor(.gray)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(name)
+                        .font(.headline)
+                        .foregroundColor(.black)
+                    Text(brandOrType)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    if !description.isEmpty {
+                        Text(description)
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                }
+                Spacer()
+                Button(action: onViewDetails) {
+                    HStack(spacing: 4) {
+                        Text("View Details")
+                            .font(.subheadline)
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.green)
+                    .clipShape(Capsule())
+                }
+                .disabled(isLoading)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(14)
+            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+            .padding(.horizontal)
+            .onAppear {
+                if imageUrl == nil && !isLoadingImage {
+                    isLoadingImage = true
+                    let service = NutritionService()
+                    service.fetchNutrition(for: barcode) { _, _, _, fetchedImageUrl, _, _, _ in
+                        DispatchQueue.main.async {
+                            self.imageUrl = fetchedImageUrl
+                            self.isLoadingImage = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -260,6 +441,30 @@ Product details:
             carbonError = error.localizedDescription
         }
         isLoadingCarbon = false
+    }
+
+    private func fetchAlternativeProduct(barcode: String) {
+        // Use NutritionService to fetch product info by barcode
+        let service = NutritionService()
+        service.fetchNutrition(for: barcode) { facts, ingredients, ecoScoreGrade, imageUrl, quantity, packaging, packagingTags in
+            DispatchQueue.main.async {
+                isLoadingAlt = false
+                if let facts = facts {
+                    altDetailProduct = ProductInfo(
+                        barcode: barcode,
+                        nutrition: facts,
+                        carbon: nil,
+                        allergens: nil,
+                        ingredients: ingredients,
+                        ecoScoreGrade: ecoScoreGrade,
+                        productImageUrl: imageUrl,
+                        quantity: quantity,
+                        packaging: packaging,
+                        packagingTags: packagingTags
+                    )
+                }
+            }
+        }
     }
     // Helper to extract JSON from Gemini response
     private func extractJSON(from text: String) -> String? {
