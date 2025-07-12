@@ -322,8 +322,9 @@ struct EcoGradeBadge: View {
 
 // MARK: - Eco Tips Section
 struct EcoTipsSection: View {
-    @State private var currentIndex = 0
+    @State private var scrollOffset: CGFloat = 0
     @State private var timer: Timer?
+    private let cardWidth: CGFloat = 136 // 120 width + 16 spacing
     
     let tips = [
         ("arrow.3.trianglepath", "Choose Recyclable", Color.green),
@@ -343,22 +344,27 @@ struct EcoTipsSection: View {
                 Spacer()
             }
             
+            // Auto-scrolling carousel with offset animation
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    ForEach(tips.indices, id: \.self) { index in
-                        let tip = tips[index]
+                    // Triple the tips for infinite scroll effect
+                    ForEach(0..<(tips.count * 3), id: \.self) { index in
+                        let tipIndex = index % tips.count
+                        let tip = tips[tipIndex]
                         
                         EcoTipCard(
                             icon: tip.0,
                             title: tip.1,
-                            color: tip.2
+                            color: tip.2,
+                            isHighlighted: false
                         )
-                        .scaleEffect(index == currentIndex ? 1.05 : 1.0)
-                        .animation(.easeInOut(duration: 0.3), value: currentIndex)
                     }
                 }
                 .padding(.horizontal, 20)
+                .offset(x: scrollOffset)
+                .animation(.easeInOut(duration: 1.0), value: scrollOffset)
             }
+            .clipped()
         }
         .onAppear {
             startAutoScroll()
@@ -370,8 +376,16 @@ struct EcoTipsSection: View {
     
     private func startAutoScroll() {
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
-            withAnimation(.easeInOut(duration: 0.8)) {
-                currentIndex = (currentIndex + 1) % tips.count
+            withAnimation(.easeInOut(duration: 1.0)) {
+                scrollOffset -= cardWidth
+                
+                // Reset position when scrolled through one complete set
+                let maxOffset = cardWidth * CGFloat(tips.count)
+                if abs(scrollOffset) >= maxOffset {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                        scrollOffset = 0
+                    }
+                }
             }
         }
     }
@@ -387,6 +401,7 @@ struct EcoTipCard: View {
     let icon: String
     let title: String
     let color: Color
+    let isHighlighted: Bool
     
     var body: some View {
         VStack(spacing: 12) {
