@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 class HistoryViewModel: ObservableObject {
-    @Published private(set) var scannedProducts: [Product] = []
+    @Published var scannedProducts: [Product] = [] // Make @Published public for observation
     private let historyStorage = HistoryStorage()
     
     init() {
@@ -32,6 +32,7 @@ class HistoryViewModel: ObservableObject {
     func clearHistory() {
         scannedProducts.removeAll()
         historyStorage.clearHistory()
+        loadHistory() // Ensure in-memory and storage are in sync
     }
     
     private func loadHistory() {

@@ -26,7 +26,7 @@ struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Hi Nagar👋")
+                                Text("Hi Pro 👋")
                                     .font(.largeTitle)
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
@@ -51,22 +51,10 @@ struct DashboardView: View {
                     }
                     
                     // Recent Scans Section
-                    if !historyViewModel.scannedProducts.isEmpty {
-                        RecentScansSection(historyViewModel: historyViewModel)
-                            .padding(.bottom, 30)
-                    }
-                    
-                    // Eco Grade Guide Section
-                    EcoGradeGuideSection()
-                        .padding(.horizontal, 20)
+                    RecentScansSection(historyViewModel: historyViewModel)
                         .padding(.bottom, 30)
                     
-                    // Eco-Friendly Tips Section
-                    EcoTipsSection()
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 30)
-                    
-                    // Allergens Card
+                    // Allergens Card (moved from bottom)
                     NavigationLink(destination: AllergensPreferencesView()) {
                         HStack(spacing: 16) {
                             // Icon section
@@ -83,7 +71,7 @@ struct DashboardView: View {
                             // Content section
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text("Allergens & Preferences")
+                                    Text("Allergens")
                                         .font(.headline)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.primary)
@@ -110,16 +98,56 @@ struct DashboardView: View {
                         .padding(.vertical, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                         )
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 30)
+                    
+                    // Eco-Friendly Tips Section
+                    EcoTipsSection()
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 30)
                 }
             }
         }
     }
+}
+
+// Add this helper at file scope (outside any struct)
+func co2String(for product: Product) -> String {
+    let value = parseCO2Value(product.geminiCarbonResult ?? product.carbonFootprint) ?? 0
+    if value == 0 {
+        return "0"
+    } else {
+        return String(format: "%.2f", value)
+    }
+}
+
+func parseCO2Value(_ value: String?) -> Double? {
+    guard let value = value, !value.isEmpty else { return nil }
+    var cleaned = value
+        .replacingOccurrences(of: "kg CO₂e", with: "")
+        .replacingOccurrences(of: "kg CO2e", with: "")
+        .replacingOccurrences(of: "kg CO₂", with: "")
+        .replacingOccurrences(of: "kg CO2", with: "")
+        .replacingOccurrences(of: "kg", with: "")
+        .replacingOccurrences(of: "CO₂e", with: "")
+        .replacingOccurrences(of: "CO2e", with: "")
+        .replacingOccurrences(of: "CO₂", with: "")
+        .replacingOccurrences(of: "CO2", with: "")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    cleaned = cleaned.replacingOccurrences(of: "(", with: "")
+    cleaned = cleaned.replacingOccurrences(of: ")", with: "")
+    cleaned = cleaned.replacingOccurrences(of: "[", with: "")
+    cleaned = cleaned.replacingOccurrences(of: "]", with: "")
+    if let doubleValue = Double(cleaned) {
+        return doubleValue
+    }
+    let numbers = cleaned.components(separatedBy: CharacterSet.decimalDigits.inverted)
+        .compactMap { Double($0) }
+    return numbers.first
 }
 
 // MARK: - Main Stats Card
@@ -127,7 +155,21 @@ struct MainStatsCard: View {
     let historyViewModel: HistoryViewModel
     
     var totalCarbonFootprint: Double {
-        historyViewModel.scannedProducts.compactMap { parseCO2Value($0.geminiCarbonResult ?? $0.carbonFootprint) }.reduce(0, +)
+        let products = historyViewModel.scannedProducts
+        let total = products.compactMap { product -> Double? in
+            let carbonValue = product.geminiCarbonResult ?? product.carbonFootprint
+            let parsedValue = parseCO2Value(carbonValue)
+            
+            // Debug: Print the values to console
+            print("Product: \(product.name)")
+            print("  Carbon Value: '\(carbonValue)'")
+            print("  Parsed Value: \(parsedValue ?? 0)")
+            
+            return parsedValue
+        }.reduce(0, +)
+        
+        print("Total Carbon Footprint: \(total)")
+        return total
     }
     
     var totalProductsScanned: Int {
@@ -179,14 +221,43 @@ struct MainStatsCard: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.systemGray6))
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
     
     private func parseCO2Value(_ value: String?) -> Double? {
-        guard let value = value else { return nil }
-        let cleaned = value.replacingOccurrences(of: "kg CO₂e", with: "").replacingOccurrences(of: "kg CO2e", with: "").replacingOccurrences(of: "kg CO2", with: "").trimmingCharacters(in: .whitespaces)
-        return Double(cleaned)
+        guard let value = value, !value.isEmpty else { return nil }
+        
+        // Remove common units and clean the string
+        var cleaned = value
+            .replacingOccurrences(of: "kg CO₂e", with: "")
+            .replacingOccurrences(of: "kg CO2e", with: "")
+            .replacingOccurrences(of: "kg CO₂", with: "")
+            .replacingOccurrences(of: "kg CO2", with: "")
+            .replacingOccurrences(of: "kg", with: "")
+            .replacingOccurrences(of: "CO₂e", with: "")
+            .replacingOccurrences(of: "CO2e", with: "")
+            .replacingOccurrences(of: "CO₂", with: "")
+            .replacingOccurrences(of: "CO2", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Handle cases where the value might be wrapped in parentheses or brackets
+        cleaned = cleaned.replacingOccurrences(of: "(", with: "")
+        cleaned = cleaned.replacingOccurrences(of: ")", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "[", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "]", with: "")
+        
+        // Try to parse the cleaned value
+        if let doubleValue = Double(cleaned) {
+            return doubleValue
+        }
+        
+        // If direct parsing fails, try to extract numbers
+        let numbers = cleaned.components(separatedBy: CharacterSet.decimalDigits.inverted)
+            .compactMap { Double($0) }
+        
+        return numbers.first
     }
 }
 
@@ -195,7 +266,7 @@ struct RecentScansSection: View {
     let historyViewModel: HistoryViewModel
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("Recent Scans")
                     .font(.title2)
@@ -205,11 +276,52 @@ struct RecentScansSection: View {
             }
             .padding(.horizontal, 20)
             
+            if historyViewModel.scannedProducts.isEmpty {
+                EmptyRecentScansView()
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(Array(historyViewModel.scannedProducts.prefix(3).enumerated()), id: \.offset) { index, product in
+                            RecentScanCard(product: product)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .padding(.bottom, 10)
+            }
+        }
+    }
+}
+
+// MARK: - Empty Recent Scans View
+struct EmptyRecentScansView: View {
+    var body: some View {
+        VStack(spacing: 16) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    ForEach(Array(historyViewModel.scannedProducts.prefix(5).enumerated()), id: \.offset) { index, product in
-                        RecentScanCard(product: product)
-                    }
+                    // Placeholder Card 1
+                    EmptyScanCard(
+                        icon: "barcode.viewfinder",
+                        title: "Start Scanning",
+                        subtitle: "Scan your first product",
+                        color: .blue
+                    )
+                    
+                    // Placeholder Card 2
+                    EmptyScanCard(
+                        icon: "leaf.circle.fill",
+                        title: "Track Impact",
+                        subtitle: "See environmental data",
+                        color: .green
+                    )
+                    
+                    // Placeholder Card 3
+                    EmptyScanCard(
+                        icon: "chart.line.uptrend.xyaxis",
+                        title: "Build History",
+                        subtitle: "Monitor your choices",
+                        color: .orange
+                    )
                 }
                 .padding(.horizontal, 20)
             }
@@ -217,121 +329,112 @@ struct RecentScansSection: View {
     }
 }
 
+// MARK: - Empty Scan Card
+struct EmptyScanCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(color.opacity(0.1))
+                    .frame(width: 100, height: 100)
+    
+                
+                Image(systemName: icon)
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(color)
+            }
+            .padding(.top, 16)
+            
+            // Text Content
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .frame(height: 36)
+                
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
+        }
+        .frame(width: 140, height: 200)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.systemGray5), lineWidth: 1)
+        )
+        .opacity(0.6)
+    }
+}
+
 // MARK: - Recent Scan Card
 struct RecentScanCard: View {
     let product: Product
     
-    var ecoGradeColor: Color {
-        switch product.ecoScoreGrade?.uppercased() {
-        case "A": return .green
-        case "B": return Color(red: 0.7, green: 0.8, blue: 0.2)
-        case "C": return .orange
-        case "D": return Color(red: 1.0, green: 0.6, blue: 0.2)
-        case "E": return .red
-        default: return .gray
-        }
+    var carbonEmission: String {
+        return product.geminiCarbonResult ?? product.carbonFootprint
     }
     
     var body: some View {
-        VStack(spacing: 14) {
-            // Product Image Placeholder
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray5))
-                .frame(width: 130, height: 90)
-                .overlay(
+        VStack(spacing: 0) {
+            // Product Image
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemGray6))
+                    .frame(width: 100, height: 100)
+                
+                if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        Image(systemName: "photo")
+                            .font(.title)
+                            .foregroundColor(.gray)
+                    }
+                    .frame(width: 100, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                } else {
                     Image(systemName: "leaf.fill")
-                        .font(.title2)
+                        .font(.title)
                         .foregroundColor(.green)
-                )
+                }
+            }
+            .padding(.top, 16)
             
-            VStack(spacing: 6) {
-                Text(String(product.name.prefix(20)))
-                    .font(.body)
-                    .fontWeight(.medium)
+            // Product Details
+            VStack(spacing: 8) {
+                // Product Name
+                Text(product.name)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(height: 36)
                 
-                Text(String(product.packaging.prefix(15)))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                // Eco Grade Badge
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(ecoGradeColor)
-                        .frame(width: 18, height: 18)
-                    
-                    Text(product.ecoScoreGrade ?? "N/A")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ecoGradeColor)
-                }
-                .padding(.top, 2)
+                // Carbon Emission
+                Text("\(co2String(for: product)) kg CO₂e")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.green)
             }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
         }
-        .frame(width: 130)
-        .padding(.vertical, 16)
-        .padding(.horizontal, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
+        .frame(width: 140, height: 200)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.systemGray5), lineWidth: 1)
         )
-    }
-}
-
-// MARK: - Eco Grade Guide Section
-struct EcoGradeGuideSection: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("Eco Grade Guide")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            
-            HStack(spacing: 16) {
-                EcoGradeBadge(grade: "A", description: "Excellent", color: .green)
-                EcoGradeBadge(grade: "B", description: "Good", color: Color(red: 0.7, green: 0.8, blue: 0.2))
-                EcoGradeBadge(grade: "C", description: "Average", color: .orange)
-                EcoGradeBadge(grade: "D", description: "Poor", color: Color(red: 1.0, green: 0.6, blue: 0.2))
-                EcoGradeBadge(grade: "E", description: "Very Poor", color: .red)
-            }
-        }
-    }
-}
-
-// MARK: - Eco Grade Badge
-struct EcoGradeBadge: View {
-    let grade: String
-    let description: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            Circle()
-                .fill(color)
-                .frame(width: 50, height: 50)
-                .overlay(
-                    Text(grade)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                )
-            
-            Text(description)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -358,20 +461,15 @@ struct EcoTipsSection: View {
                     .foregroundColor(.primary)
                 Spacer()
             }
+            .padding(.horizontal, 20)
             
-            // Auto-scrolling carousel with offset animation
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    // Triple the tips for infinite scroll effect
-                    ForEach(0..<(tips.count * 3), id: \.self) { index in
-                        let tipIndex = index % tips.count
-                        let tip = tips[tipIndex]
-                        
+                    ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
                         EcoTipCard(
                             icon: tip.0,
                             title: tip.1,
-                            color: tip.2,
-                            isHighlighted: false
+                            color: tip.2
                         )
                     }
                 }
@@ -379,6 +477,7 @@ struct EcoTipsSection: View {
                 .offset(x: scrollOffset)
                 .animation(.easeInOut(duration: 1.0), value: scrollOffset)
             }
+            .frame(height: 160)
             .clipped()
         }
         .onAppear {
@@ -416,7 +515,6 @@ struct EcoTipCard: View {
     let icon: String
     let title: String
     let color: Color
-    let isHighlighted: Bool
     
     var body: some View {
         VStack(spacing: 12) {
@@ -430,6 +528,7 @@ struct EcoTipCard: View {
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(color)
             }
+            .frame(height: 50)
             
             Text(title)
                 .font(.subheadline)
@@ -437,15 +536,14 @@ struct EcoTipCard: View {
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(height: 40)
         }
-        .frame(width: 120, height: 115)
+        .frame(width: 120, height: 120)
         .padding(.horizontal, 12)
         .padding(.vertical, 16)
-        .background(
+        .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                .stroke(Color(.systemGray5), lineWidth: 1)
         )
     }
 }

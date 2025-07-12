@@ -8,12 +8,12 @@ struct AllergensPreferencesView: View {
 
 
     let commonAllergens = [
-        ("Dairy", "drop.fill"), // changed from carton.fill
-        ("Nuts", "carrot.fill"),
-        ("Gluten", "circle.grid.3x3.fill"),
+        ("Peanut", "leaf.circle.fill"),
+        ("Milk", "drop.fill"),
         ("Soy", "leaf.fill"),
-        ("Eggs", "circle.fill"), // changed from egg.fill
-        ("Fish", "fish.fill")
+        ("Wheat", "circle.grid.3x3.fill"),
+        ("Fish", "fish.fill"),
+        ("Gluten", "circle.hexagongrid.fill")
     ]
 
     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]

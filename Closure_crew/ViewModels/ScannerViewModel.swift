@@ -76,7 +76,10 @@ class ScannerViewModel: ObservableObject {
                     print("♻️ Using cached Gemini result for barcode \(upc): \(cached)")
                     geminiResult = cached
                 } else {
-                    geminiResult = await geminiService.estimateCarbon(for: info)
+                    let geminiResultRaw = await geminiService.estimateCarbon(for: info)
+                    geminiResult = geminiResultRaw?
+                        .components(separatedBy: .whitespaces)
+                        .first(where: { Double($0) != nil }) ?? "0"
                 }
                 self.geminiCarbonResult = geminiResult
                 

@@ -540,25 +540,6 @@ struct ProductDetailView: View {
                             }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 15))
-                        // Not Eco-Friendly badge (forced or for hardcoded)
-                        if forceNotEcoFriendly {
-                            VStack {
-                                HStack {
-                                    Spacer()
-                                    Label("Not Eco-Friendly", systemImage: "exclamationmark.triangle.fill")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(Color.red.opacity(0.9))
-                                        .clipShape(Capsule())
-                                        .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
-                                }
-                                .padding(.top, 12)
-                                .padding(.trailing, 12)
-                                Spacer()
-                            }
-                        }
                         // Allergen warning badge (if contains allergen and not forced not eco-friendly)
                         if let allergen = containsAllergen, !forceNotEcoFriendly {
                             VStack {

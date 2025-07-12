@@ -242,9 +242,37 @@ struct HistoryView: View {
     }
 
     func parseCO2Value(_ value: String?) -> Double? {
-        guard let value = value else { return nil }
-        let cleaned = value.replacingOccurrences(of: "kg CO₂e", with: "").replacingOccurrences(of: "kg CO2e", with: "").replacingOccurrences(of: "kg CO2", with: "").trimmingCharacters(in: .whitespaces)
-        return Double(cleaned)
+        guard let value = value, !value.isEmpty else { return nil }
+        
+        // Remove common units and clean the string
+        var cleaned = value
+            .replacingOccurrences(of: "kg CO₂e", with: "")
+            .replacingOccurrences(of: "kg CO2e", with: "")
+            .replacingOccurrences(of: "kg CO₂", with: "")
+            .replacingOccurrences(of: "kg CO2", with: "")
+            .replacingOccurrences(of: "kg", with: "")
+            .replacingOccurrences(of: "CO₂e", with: "")
+            .replacingOccurrences(of: "CO2e", with: "")
+            .replacingOccurrences(of: "CO₂", with: "")
+            .replacingOccurrences(of: "CO2", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Handle cases where the value might be wrapped in parentheses or brackets
+        cleaned = cleaned.replacingOccurrences(of: "(", with: "")
+        cleaned = cleaned.replacingOccurrences(of: ")", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "[", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "]", with: "")
+        
+        // Try to parse the cleaned value
+        if let doubleValue = Double(cleaned) {
+            return doubleValue
+        }
+        
+        // If direct parsing fails, try to extract numbers
+        let numbers = cleaned.components(separatedBy: CharacterSet.decimalDigits.inverted)
+            .compactMap { Double($0) }
+        
+        return numbers.first
     }
 
     func co2String(for product: Product) -> String {

@@ -28,5 +28,7 @@ class HistoryStorage {
     
     func clearHistory() {
         UserDefaults.standard.removeObject(forKey: historyKey)
+        // Immediately save an empty array to ensure observers update
+        save([])
     }
 } 
