@@ -28,6 +28,8 @@ struct ProductDetailView: View {
     var isAlternative: Bool = false
     @State private var altDetailProduct: ProductInfo? = nil
     @State private var isLoadingAlt: Bool = false
+    var onChooseAlternative: ((ProductInfo, String?) -> Void)? = nil // <-- Add replacingBarcode param
+    var replacingBarcode: String? = nil // <-- Track which product to replace
     
     private var selectedAllergens: Set<String> {
         get { Set(selectedAllergensRaw.split(separator: ",").map { String($0) }) }
@@ -35,59 +37,97 @@ struct ProductDetailView: View {
     }
     
     var body: some View {
+        ZStack(alignment: .bottom) {
         ScrollView {
             VStack(spacing: 20) {
-                productCard
-                carbonFootprintCard
-                nutritionFactsCard
-                allergenWarningCard
-                alternativesSection
-                Spacer(minLength: 24)
+                    productCard
+                    carbonFootprintCard
+                    nutritionFactsCard
+                    allergenWarningCard
+                    if !isAlternative {
+                        alternativesSection
+                    }
+                    Spacer(minLength: 24)
+                }
+                .padding(.top, 8)
+                .padding(.bottom, isAlternative ? 80 : 8) // Add space for button if needed
             }
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-            // No background color here; let system default show through
-        }
-        .navigationTitle("Product Insights")
-        .navigationBarTitleDisplayMode(.large)
-        .sheet(item: $altDetailProduct) { altProduct in
-            ProductDetailView(productInfo: altProduct, isAlternative: true)
-        }
-        .onAppear {
-            Task {
-                await fetchCarbonResult()
+            .navigationTitle("Product Insights")
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $altDetailProduct) { altProduct in
+                NavigationView {
+                    ProductDetailView(
+                        productInfo: altProduct,
+                        scannerViewModel: scannerViewModel,
+                        isAlternative: true,
+                        onChooseAlternative: onChooseAlternative,
+                        replacingBarcode: productInfo.barcode // Pass current product's barcode
+                    )
+                }
+            }
+            .onAppear {
+                Task {
+                    await fetchCarbonResult()
+                }
+            }
+            // Sticky button for alternative products
+            if isAlternative {
+                VStack {
+                    Button(action: {
+                        if let scannerViewModel = scannerViewModel {
+                            // Save to history
+                            scannerViewModel.saveProductToHistory(productInfo: productInfo, carbonResult: carbonResult, carbonString: carbonString, replacingBarcode: replacingBarcode)
+                        }
+                        // Dismiss modal
+                        presentationMode.wrappedValue.dismiss()
+                        // Notify parent
+                        onChooseAlternative?(productInfo, replacingBarcode)
+                    }) {
+                        Text("Choose This Product")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 24)
+                    }
+                    .padding(.bottom, 24)
+                }
+                .background(Color(.systemBackground).opacity(0.95).ignoresSafeArea())
+                .transition(.move(edge: .bottom))
             }
         }
     }
     
     private var productCard: some View {
-        HStack(alignment: .top, spacing: 16) {
-            if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 72, height: 72)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 72, height: 72)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    case .failure:
-                        Image(systemName: "photo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 72, height: 72)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .foregroundColor(.gray)
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
+                HStack(alignment: .top, spacing: 16) {
+                    if let imageUrl = productInfo.productImageUrl, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: 72, height: 72)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 72, height: 72)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 72, height: 72)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .foregroundColor(.gray)
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
             } else {
                 Image(systemName: "photo")
                     .resizable()
@@ -96,31 +136,31 @@ struct ProductDetailView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .foregroundColor(.gray)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                if let name = productInfo.nutrition?.item_name, !name.isEmpty {
-                    Text(name)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.black)
-                }
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let name = productInfo.nutrition?.item_name, !name.isEmpty {
+                            Text(name)
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(.black)
+                        }
                 if let label = ecoFriendlyLabel(), !label.isEmpty {
                     Text(label)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
                         .background(label == "Eco-Friendly" ? Color.green : Color.red)
-                        .clipShape(Capsule())
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Spacer()
                 }
-            }
-            Spacer()
-        }
-        .padding()
+                .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(radius: 5)
-        .padding(.horizontal)
+                .padding(.horizontal)
     }
 
     private var carbonFootprintCard: some View {
@@ -134,18 +174,18 @@ struct ProductDetailView: View {
                     .shadow(radius: 5)
                     .padding(.horizontal)
             } else if let carbon = carbonResult {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Carbon Footprint")
-                        .font(.headline)
-                        .foregroundColor(.black)
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Carbon Footprint")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(String(format: "%.3f", carbon.totalKgCO2e))
                             .font(.title2.weight(.semibold))
-                            .foregroundColor(.black)
+                                .foregroundColor(.black)
                         Text("kg CO₂e")
                             .font(.body)
-                            .foregroundColor(.gray)
-                    }
+                                .foregroundColor(.gray)
+                        }
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -158,9 +198,21 @@ struct ProductDetailView: View {
                     Text("Carbon Footprint")
                         .font(.headline)
                         .foregroundColor(.black)
-                    Text(parseCO2eValue(from: carbonString))
-                        .font(.title2.weight(.semibold))
-                        .foregroundColor(.black)
+                    // Always use only the last non-empty line, and extract only the first valid number
+                    let lastLine = carbonString
+                        .components(separatedBy: .newlines)
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .last { !$0.isEmpty } ?? carbonString
+                    let numberString = lastLine.components(separatedBy: CharacterSet(charactersIn: "0123456789.").inverted).joined()
+                    if let value = Double(numberString) {
+                        Text("\(String(format: "%.3f", value)) kg CO₂e")
+                            .font(.title2.weight(.semibold))
+                            .foregroundColor(.black)
+                    } else {
+                        Text("Not available")
+                            .font(.title2.weight(.semibold))
+                            .foregroundColor(.gray)
+                    }
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -179,15 +231,15 @@ struct ProductDetailView: View {
                     .padding(.horizontal)
             }
         }
-    }
-
+                }
+                
     private var nutritionFactsCard: some View {
         Group {
-            if let facts = productInfo.nutrition {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Nutrition Facts")
-                        .font(.headline)
-                        .foregroundColor(.black)
+                if let facts = productInfo.nutrition {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Nutrition Facts")
+                            .font(.headline)
+                            .foregroundColor(.black)
                     let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
                     LazyVGrid(columns: gridItems, spacing: 16) {
                         nutritionFactGridCell(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
@@ -216,7 +268,7 @@ struct ProductDetailView: View {
         Group {
             if let userAllergensRaw = UserDefaults.standard.string(forKey: "selectedAllergens"),
                !userAllergensRaw.isEmpty {
-                let userAllergens = Set(userAllergensRaw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+                let userAllergens = Set(userAllergensRaw.split(separator: ",").map { String($0) })
                 let productIngredients = (productInfo.ingredients ?? "").lowercased()
                 let matching = userAllergens.filter { productIngredients.contains($0) }
                 if !matching.isEmpty {
@@ -236,55 +288,183 @@ struct ProductDetailView: View {
                 }
             }
         }
-    }
-
+                }
+                
     private var productAllergensWarning: some View {
         Group {
-            if let allergens = productInfo.allergens {
-                let matching = Set(allergens).intersection(selectedAllergens)
-                if !matching.isEmpty {
-                    HStack(alignment: .center, spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.brown)
-                        Text("Contains: \(matching.sorted().joined(separator: ", "))")
-                            .font(.body.weight(.semibold))
-                            .foregroundColor(.brown)
+                if let allergens = productInfo.allergens {
+                    let matching = Set(allergens).intersection(selectedAllergens)
+                    if !matching.isEmpty {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.brown)
+                            Text("Contains: \(matching.sorted().joined(separator: ", "))")
+                                .font(.body.weight(.semibold))
+                                .foregroundColor(.brown)
                             .multilineTextAlignment(.leading)
-                    }
-                    .padding()
+                        }
+                        .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.yellow.opacity(0.18))
-                    .cornerRadius(14)
-                    .padding(.horizontal)
+                        .background(Color.yellow.opacity(0.18))
+                        .cornerRadius(14)
+                        .padding(.horizontal)
+                    }
                 }
-            }
         }
     }
 
     private var alternativesSection: some View {
         Group {
-            if !isAlternative, let alternatives = alternatives, !alternatives.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Eco-Friendly Alternatives")
-                        .font(.headline)
-                        .foregroundColor(.black)
-                        .padding(.horizontal)
-                    ForEach(alternatives) { alt in
-                        alternativeCard(for: alt)
+            if !isAlternative {
+                if let alternatives = alternatives, !alternatives.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Modern header with background
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 12) {
+                                // Icon with background
+                                ZStack {
+                                    Circle()
+                                        .fill(LinearGradient(
+                                            colors: [Color.green.opacity(0.2), Color.green.opacity(0.1)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ))
+                                        .frame(width: 40, height: 40)
+                                    
+                                    Image(systemName: "shield.checkered")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.green)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Allergen-Free Alternatives")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                    
+                                    Text("Safer options for your dietary needs")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                // Badge showing count
+                                Text("\(alternatives.count)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 24, height: 24)
+                                    .background(Color.green)
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(15)
+                        .shadow(radius: 5)
+                        .padding(.horizontal, 16)
+                        
+                        // Alternatives cards
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 20) {
+                                ForEach(alternatives) { alt in
+                                    alternativeCard(for: alt, forceNotEcoFriendly: true)
+                                        .frame(width: 300)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
+                        }
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Modern header with background (same as above, but count is 0)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(LinearGradient(
+                                            colors: [Color.green.opacity(0.2), Color.green.opacity(0.1)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: "shield.checkered")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.green)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Allergen-Free Alternatives")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                    Text("Safer options for your dietary needs")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text("0")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 24, height: 24)
+                                    .background(Color.green)
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(15)
+                        .shadow(radius: 5)
+                        .padding(.horizontal, 16)
+                        // No card below
                     }
                 }
             }
         }
     }
 
-    private func alternativeCard(for alt: AlternativeProduct) -> some View {
+    // Modified alternativeCard to accept forceNotEcoFriendly
+    private func alternativeCard(for alt: AlternativeProduct, forceNotEcoFriendly: Bool = false) -> some View {
         AlternativeImageCard(barcode: alt.barcode, name: alt.name, brandOrType: alt.brandOrType, description: alt.description, onViewDetails: {
             isLoadingAlt = true
             fetchAlternativeProduct(barcode: alt.barcode)
-        }, isLoading: isLoadingAlt)
+        }, isLoading: isLoadingAlt, forceNotEcoFriendly: forceNotEcoFriendly)
     }
 
-    // New subview for alternative card with image fetched from API
+    // Card for 'No alternatives available'
+    struct NoAlternativeCard: View {
+        var body: some View {
+            VStack(alignment: .center, spacing: 24) {
+                Spacer(minLength: 12)
+                Image(systemName: "xmark.octagon.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.red)
+                Text("No alternatives available")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                HStack {
+                    Spacer()
+                    Label("Not Eco-Friendly", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                    Spacer()
+                }
+                Spacer(minLength: 12)
+            }
+            .padding(24)
+            .background(Color(.systemBackground))
+            .cornerRadius(15)
+            .shadow(radius: 5)
+        }
+    }
+
+    // Modified AlternativeImageCard to accept forceNotEcoFriendly
     struct AlternativeImageCard: View {
         let barcode: String
         let name: String
@@ -292,88 +472,221 @@ struct ProductDetailView: View {
         let description: String
         let onViewDetails: () -> Void
         let isLoading: Bool
+        var forceNotEcoFriendly: Bool = false
         @State private var imageUrl: String? = nil
         @State private var isLoadingImage = false
+        @State private var isPressed = false
+        @AppStorage("selectedAllergens") private var selectedAllergensRaw: String = ""
+
+        // Allergen logic
+        var userAllergens: [String] {
+            selectedAllergensRaw.split(separator: ",").map { String($0) }
+        }
+        var containsAllergen: String? {
+            let lowerDesc = description.lowercased()
+            return userAllergens.first(where: { !$0.isEmpty && lowerDesc.contains($0) })
+        }
 
         var body: some View {
-            HStack(spacing: 16) {
-                Group {
-                    if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ZStack(alignment: .topTrailing) {
+                        ZStack {
+                            LinearGradient(
+                                colors: [Color(.systemGray6), Color(.systemGray5)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .frame(height: 160)
+                            .frame(maxWidth: .infinity)
+                            if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(height: 160)
+                                            .frame(maxWidth: .infinity)
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(height: 160)
+                                            .frame(maxWidth: .infinity)
+                                            .clipped()
+                                    case .failure:
+                                        Image(systemName: "photo")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 60, height: 60)
+                                            .foregroundColor(.gray)
+                                            .frame(height: 160)
+                                            .frame(maxWidth: .infinity)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
+                            } else if isLoadingImage {
                                 ProgressView()
-                                    .frame(width: 64, height: 64)
-                                    .background(Color(.systemGray5))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(1, contentMode: .fill)
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .clipped()
-                            case .failure:
+                                    .frame(height: 160)
+                                    .frame(maxWidth: .infinity)
+                            } else {
                                 Image(systemName: "photo")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 64, height: 64)
-                                    .background(Color(.systemGray5))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .frame(width: 60, height: 60)
                                     .foregroundColor(.gray)
-                            @unknown default:
-                                EmptyView()
+                                    .frame(height: 160)
+                                    .frame(maxWidth: .infinity)
                             }
                         }
-                    } else if isLoadingImage {
-                        ProgressView()
-                            .frame(width: 64, height: 64)
-                            .background(Color(.systemGray5))
+                        .clipShape(RoundedRectangle(cornerRadius: 15))
+                        // Not Eco-Friendly badge (forced or for hardcoded)
+                        if forceNotEcoFriendly {
+                            VStack {
+                                HStack {
+                                    Spacer()
+                                    Label("Not Eco-Friendly", systemImage: "exclamationmark.triangle.fill")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.red.opacity(0.9))
+                                        .clipShape(Capsule())
+                                        .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                }
+                                .padding(.top, 12)
+                                .padding(.trailing, 12)
+                                Spacer()
+                            }
+                        }
+                        // Allergen warning badge (if contains allergen and not forced not eco-friendly)
+                        if let allergen = containsAllergen, !forceNotEcoFriendly {
+                            VStack {
+                                HStack {
+                                    Spacer()
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 10, weight: .bold))
+                                        Text("Contains \(allergen.capitalized)")
+                                            .font(.system(size: 10, weight: .bold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.red.opacity(0.9))
+                                            .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    )
+                                }
+                                .padding(.top, 12)
+                                .padding(.trailing, 12)
+                                Spacer()
+                            }
+                        }
+                        // Safe badge overlay (if not forced not eco-friendly)
+                        if !forceNotEcoFriendly {
+                            VStack {
+                                HStack {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.shield.fill")
+                                            .font(.system(size: 10, weight: .bold))
+                                        Text("SAFE")
+                                            .font(.system(size: 10, weight: .bold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.green.opacity(0.9))
+                                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+                                    )
+                                    Spacer()
+                                }
+                                .padding(.top, 12)
+                                .padding(.leading, 12)
+                                Spacer()
+                            }
+                        }
+                    }
+                    
+                    // Product info section
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Product name
+                        Text(name)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        
+                        // Brand/Type with icon
+                        HStack(spacing: 6) {
+                            Image(systemName: "tag.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Text(brandOrType)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        // Description with icon
+                        if !description.isEmpty {
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "leaf.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.green)
+                                    .padding(.top, 2)
+                                
+                                Text(description)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.green)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
+                        
+                        // Action button
+                        Button(action: onViewDetails) {
+                            HStack(spacing: 8) {
+                                if isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .foregroundColor(.white)
+                                } else {
+                                    Text("View Details")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.green, Color.green.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                    } else {
-                        Image(systemName: "photo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 64, height: 64)
-                            .background(Color(.systemGray5))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .foregroundColor(.gray)
+                            .shadow(color: Color.green.opacity(0.3), radius: 6, x: 0, y: 3)
+                        }
+                        .disabled(isLoading)
+                        .scaleEffect(isPressed ? 0.98 : 1.0)
+                        .animation(.easeInOut(duration: 0.15), value: isPressed)
+                        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                            isPressed = pressing
+                        }, perform: {})
                     }
+                    .padding(20)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(name)
-                        .font(.headline)
-                        .foregroundColor(.black)
-                    Text(brandOrType)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    if !description.isEmpty {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                }
-                Spacer()
-                Button(action: onViewDetails) {
-                    HStack(spacing: 4) {
-                        Text("View Details")
-                            .font(.subheadline)
-                        Image(systemName: "chevron.right")
-                            .font(.subheadline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.green)
-                    .clipShape(Capsule())
-                }
-                .disabled(isLoading)
             }
-            .padding()
             .background(Color(.systemBackground))
-            .cornerRadius(14)
-            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
-            .padding(.horizontal)
+            .cornerRadius(15)
+            .shadow(radius: 5)
             .onAppear {
                 if imageUrl == nil && !isLoadingImage {
                     isLoadingImage = true
@@ -390,19 +703,24 @@ struct ProductDetailView: View {
     }
     
     private func fetchCarbonResult() async {
-        guard let scannerViewModel = scannerViewModel else { return }
         isLoadingCarbon = true
         carbonError = nil
         carbonResult = nil
         carbonString = nil
+        
+        // For alternative products, don't save to history
+        let shouldSaveToHistory = scannerViewModel != nil && !isAlternative
+        
         do {
-            // Check if product is in history and has a carbon value
-            if let historyProduct = scannerViewModel.historyViewModel.scannedProducts.first(where: { $0.code == productInfo.barcode }),
+            // Check if product is in history and has a carbon value (only for non-alternative products)
+            if shouldSaveToHistory, let scannerViewModel = scannerViewModel,
+               let historyProduct = scannerViewModel.historyViewModel.scannedProducts.first(where: { $0.code == productInfo.barcode }),
                let savedValue = historyProduct.geminiCarbonResult, !savedValue.isEmpty {
                 carbonString = savedValue
                 isLoadingCarbon = false
                 return
             }
+            
             let prompt = """
 Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product. Also, provide an eco-friendly label (Eco-Friendly or Not Eco-Friendly). Use the product's packaging, ingredients, quantity, and ecoScoreGrade to make your estimate. Do not use a default value. If information is missing, make your best estimate based on what is provided. Carefully analyze the provided product details. Your answer must be based on these details. Return the result in the following JSON format:
 {
@@ -416,24 +734,40 @@ Product details:
 - Quantity: \(productInfo.quantity ?? "")
 - EcoScore Grade: \(productInfo.ecoScoreGrade ?? "")
 """
-            let response = try await scannerViewModel.geminiService.sendPrompt(prompt)
+            
+            // Use scannerViewModel's GeminiService if available, otherwise create a temporary one
+            let geminiService: GeminiService
+            if let scannerViewModel = scannerViewModel {
+                geminiService = scannerViewModel.geminiService
+            } else {
+                geminiService = GeminiService(apiKey: "AIzaSyBFPSpiWUNLvL390wzHI0NUyN7ZDsh5EV0")
+            }
+            
+            let response = try await geminiService.sendPrompt(prompt)
             print("Gemini raw response for \(productInfo.nutrition?.item_name ?? ""): \n\(response)")
+            
             if let jsonString = extractJSON(from: response),
                let data = jsonString.data(using: String.Encoding.utf8) {
                 let decoder = JSONDecoder()
                 if let result = try? decoder.decode(CarbonFootprintResult.self, from: data) {
                     carbonResult = result
-                    // Save to history in kg
-                    scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: String(format: "%.2f kg CO₂e", result.totalKgCO2e))
+                    // Save to history only for non-alternative products
+                    if shouldSaveToHistory, let scannerViewModel = scannerViewModel {
+                        scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: String(format: "%.2f kg CO₂e", result.totalKgCO2e))
+                    }
                 } else if let value = extractFinalCO2e(from: response) {
                     carbonString = value
-                    scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+                    if shouldSaveToHistory, let scannerViewModel = scannerViewModel {
+                        scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+                    }
                 } else {
                     carbonString = response.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
             } else if let value = extractFinalCO2e(from: response) {
                 carbonString = value
-                scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+                if shouldSaveToHistory, let scannerViewModel = scannerViewModel {
+                    scannerViewModel.saveCarbonResultToHistory(for: productInfo, value: value)
+                }
             } else {
                 carbonString = response.trimmingCharacters(in: .whitespacesAndNewlines)
             }

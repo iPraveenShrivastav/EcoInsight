@@ -70,10 +70,15 @@ struct HistoryView: View {
     @State private var showingClearConfirmation = false
     @State private var showingEcoGradeInfo = false
     @State private var selectedEcoGrade: String = ""
-    @State private var showShareSheet = false
+    @State private var showingEnvironmentalImpact = false
 
     var totalCO2Saved: Double {
         // Example: sum of all negative carbon values (if any), else 0
+        viewModel.scannedProducts.compactMap { parseCO2Value($0.geminiCarbonResult ?? $0.carbonFootprint) }.reduce(0, +)
+    }
+    
+    var totalCarbonFootprint: Double {
+        // Calculate total carbon footprint from all scanned products
         viewModel.scannedProducts.compactMap { parseCO2Value($0.geminiCarbonResult ?? $0.carbonFootprint) }.reduce(0, +)
     }
 
@@ -116,19 +121,16 @@ struct HistoryView: View {
                                         .foregroundColor(.black)
                                 }
                                 Spacer()
-                                Button(action: { showShareSheet = true }) {
+                                Button(action: { showingEnvironmentalImpact = true }) {
                                     HStack {
-                                        Image(systemName: "square.and.arrow.up")
-                                        Text("Share Impact")
+                                        Image(systemName: "leaf.circle.fill")
+                                        Text("Environmental Impact")
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 10)
                                     .background(Color.green.opacity(0.15))
                                     .foregroundColor(.green)
                                     .clipShape(Capsule())
-                                }
-                                .sheet(isPresented: $showShareSheet) {
-                                    ActivityView(activityItems: ["I've saved \(String(format: "%.2f", totalCO2Saved)) kg using EcoScan!"])
                                 }
                             }
                             .padding()
@@ -222,6 +224,20 @@ struct HistoryView: View {
             .sheet(isPresented: $showingEcoGradeInfo) {
                 EcoGradeInfoSheet(grade: selectedEcoGrade)
             }
+            .sheet(isPresented: $showingEnvironmentalImpact) {
+                NavigationView {
+                    EarthPollutionView(carbonFootprint: totalCarbonFootprint)
+                        .navigationTitle("Environmental Impact")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    showingEnvironmentalImpact = false
+                                }
+                            }
+                        }
+                }
+            }
         }
     }
 
@@ -249,16 +265,7 @@ struct HistoryView: View {
     }
 }
 
-// Share Sheet Helper
-import UIKit
-struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-    let applicationActivities: [UIActivity]? = nil
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
-    }
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
+
 
 struct HistoryView_Previews: PreviewProvider {
     static var previews: some View {

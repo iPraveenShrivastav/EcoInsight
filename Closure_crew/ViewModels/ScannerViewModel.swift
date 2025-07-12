@@ -149,4 +149,36 @@ extension ScannerViewModel {
         }
         // If not in history, add a new Product (optional, depending on your flow)
     }
+
+    // Add this helper for alternative product selection
+    func saveProductToHistory(productInfo: ProductInfo, carbonResult: CarbonFootprintResult?, carbonString: String?, replacingBarcode: String?) {
+        // Remove the previous product if needed
+        if let replacingBarcode = replacingBarcode,
+           let index = historyViewModel.scannedProducts.firstIndex(where: { $0.code == replacingBarcode }) {
+            let oldProduct = historyViewModel.scannedProducts[index]
+            historyViewModel.deleteProduct(oldProduct)
+        }
+        let geminiValue: String? = {
+            if let carbonResult = carbonResult {
+                return String(format: "%.2f kg CO₂e", carbonResult.totalKgCO2e)
+            } else if let carbonString = carbonString {
+                return carbonString
+            } else {
+                return nil
+            }
+        }()
+        let product = Product(
+            code: productInfo.barcode,
+            name: productInfo.nutrition?.item_name ?? "",
+            packaging: productInfo.packaging ?? "",
+            packagingTags: productInfo.packagingTags ?? [],
+            carbonFootprint: "", // Only using Gemini for now
+            ecoScore: nil,
+            ecoScoreGrade: productInfo.ecoScoreGrade,
+            geminiCarbonResult: geminiValue,
+            scannedAt: Date(),
+            imageUrl: productInfo.productImageUrl
+        )
+        historyViewModel.addScan(product)
+    }
 }

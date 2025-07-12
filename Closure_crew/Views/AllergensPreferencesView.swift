@@ -5,7 +5,7 @@ struct AllergensPreferencesView: View {
     @AppStorage("selectedAllergens") private var selectedAllergensString: String = ""
     @State private var selectedAllergens: Set<String> = []
     @State private var customAllergen: String = ""
-    @State private var showSustainableOnly: Bool = true
+
 
     let commonAllergens = [
         ("Dairy", "drop.fill"), // changed from carton.fill
@@ -96,26 +96,13 @@ struct AllergensPreferencesView: View {
                         .padding(.vertical, 4)
                     }
                 }
-                // Sustainable Alternatives Toggle
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Only show sustainable alternatives")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                        Text("Filter products with lower carbon footprint")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    Toggle("", isOn: $showSustainableOnly)
-                        .labelsHidden()
-                }
+
                 Spacer(minLength: 0)
             }
             .padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Allergens & Preferences")
+        .navigationTitle("Allergens")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             // Load from storage

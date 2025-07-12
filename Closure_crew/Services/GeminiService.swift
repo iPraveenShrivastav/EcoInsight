@@ -9,16 +9,21 @@ class GeminiService {
 
     func estimateCarbon(for productInfo: ProductInfo) async -> String? {
         let prompt = """
-You are a sustainability expert. Estimate the total carbon footprint (in kg CO₂e) for the following packaged food product, using a life-cycle approach (cradle-to-grave). Use all available data: product name, ingredients, product weight, packaging material, eco-score, and any other relevant info.
+Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product, and determine if it is eco-friendly or not. 
+Base your answer strictly on the product's packaging, ingredients, and quantity. 
+If the packaging is recyclable, minimal, or compostable, and the ingredients are plant-based or have low environmental impact, label as "Eco-Friendly". Otherwise, label as "Not Eco-Friendly".
 
-Provide a brief explanation and breakdown if needed, but ALWAYS return the total carbon footprint as the LAST line, in the format:
-Total carbon footprint: [number] kg CO₂e
+Return your answer in the following format, with no explanation or extra text:
+<carbon_footprint_value> <eco_friendly_label>
 
-Product name: \(productInfo.nutrition?.item_name ?? "Unknown")
-Ingredients: \(productInfo.ingredients ?? "Unknown")
-Product weight: \(productInfo.quantity ?? "Unknown")
-Packaging: \(productInfo.packaging ?? "Unknown")
-Eco-score: \(productInfo.ecoScoreGrade ?? "Unknown")
+Example:
+0.15 Eco-Friendly
+
+Product details:
+- Name: \(productInfo.nutrition?.item_name ?? "Unknown")
+- Packaging: \(productInfo.packaging ?? "Unknown")
+- Ingredients: \(productInfo.ingredients ?? "Unknown")
+- Quantity: \(productInfo.quantity ?? "Unknown")
 """
 
         guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(apiKey)") else {
@@ -51,25 +56,8 @@ Eco-score: \(productInfo.ecoScoreGrade ?? "Unknown")
                let content = candidates.first?["content"] as? [String: Any],
                let parts = content["parts"] as? [[String: Any]],
                let text = parts.first?["text"] as? String {
-                // Extract the last line matching 'Total carbon footprint: [number] kg CO₂e'
-                let lines = text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                let pattern = #"([0-9]+\.?[0-9]*)\s*kg\s*CO[2₂]e"#
-                // Search from the last line up
-                for line in lines.reversed() {
-                    if let match = line.range(of: pattern, options: .regularExpression) {
-                        // Return only the matched value (e.g., '0.64 kg CO₂e')
-                        return String(line[match])
-                    }
-                }
-                // Fallback: last line containing 'kg'
-                if let line = lines.reversed().first(where: { $0.lowercased().contains("kg") }) {
-                    if let match = line.range(of: pattern, options: .regularExpression) {
-                        return String(line[match])
-                    }
-                    return line
-                }
-                // Fallback: return the last non-empty line
-                if let last = lines.reversed().first(where: { !$0.isEmpty }) {
+                // Extract the last non-empty line
+                if let last = text.components(separatedBy: .newlines).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }).reversed().first(where: { !$0.isEmpty }) {
                     return last
                 }
                 // Fallback: return the whole text
@@ -113,26 +101,36 @@ extension GeminiService {
 
     func fetchCarbonFootprintBreakdown(for product: ProductInfo) async throws -> CarbonFootprintResult? {
         let prompt = """
-Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product. Also, provide an eco-friendly label (Eco-Friendly or Not Eco-Friendly). Use the product's packaging, ingredients, quantity, and ecoScoreGrade to make your estimate. Do not use a default value. If information is missing, make your best estimate based on what is provided. Carefully analyze the provided product details. Your answer must be based on these details. Return the result in the following JSON format:
-{
-  \"total_kg_co2e\": <number, e.g. 0.15>,
-  \"eco_friendly_label\": \"<Eco-Friendly or Not Eco-Friendly>\"
-}
+Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product, and determine if it is eco-friendly or not. 
+Base your answer strictly on the product's packaging, ingredients, and quantity. 
+If the packaging is recyclable, minimal, or compostable, and the ingredients are plant-based or have low environmental impact, label as "Eco-Friendly". Otherwise, label as "Not Eco-Friendly".
+
+Return your answer in the following format, with no explanation or extra text:
+<carbon_footprint_value> <eco_friendly_label>
+
+Example:
+0.15 Eco-Friendly
+
 Product details:
 - Name: \(product.nutrition?.item_name ?? "")
 - Packaging: \(product.packaging ?? "")
 - Ingredients: \(product.ingredients ?? "")
 - Quantity: \(product.quantity ?? "")
-- EcoScore Grade: \(product.ecoScoreGrade ?? "")
 """
         print("Gemini prompt for \(product.nutrition?.item_name ?? ""): \n\(prompt)")
         let response = try await self.sendPrompt(prompt)
         print("Gemini raw response for \(product.nutrition?.item_name ?? ""): \n\(response)")
-        if let jsonString = extractJSON(from: response),
-           let data = jsonString.data(using: String.Encoding.utf8) {
-            let decoder = JSONDecoder()
-            if let result = try? decoder.decode(CarbonFootprintResult.self, from: data) {
-                return result
+        // Parse the last non-empty line
+        let lines = response.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let last = lines.reversed().first(where: { !$0.isEmpty }) {
+            let parts = last.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+            if parts.count == 2, let value = Double(parts[0]) {
+                let label = String(parts[1])
+                return CarbonFootprintResult(
+                    totalKgCO2e: value,
+                    breakdown: CarbonFootprintResult.Breakdown(productionPercent: 0, packagingPercent: 0, transportPercent: 0),
+                    ecoFriendlyLabel: label
+                )
             }
         }
         return nil
