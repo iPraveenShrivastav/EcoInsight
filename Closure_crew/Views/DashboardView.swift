@@ -2,6 +2,21 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var historyViewModel: HistoryViewModel
+    @AppStorage("selectedAllergens") private var selectedAllergensString: String = ""
+    
+    private var selectedAllergens: [String] {
+        selectedAllergensString.isEmpty ? [] : selectedAllergensString.split(separator: ",").map { String($0) }
+    }
+    
+    private var allergenStatus: (text: String, color: Color) {
+        if selectedAllergens.isEmpty {
+            return ("Not set", .red)
+        } else if selectedAllergens.count == 1 {
+            return ("1 allergen set", .green)
+        } else {
+            return ("\(selectedAllergens.count) allergens set", .green)
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -84,10 +99,10 @@ struct DashboardView: View {
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
                                 
-                                Text("Not set")
+                                Text(allergenStatus.text)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(allergenStatus.color)
                                     .padding(.top, 2)
                             }
                         }
