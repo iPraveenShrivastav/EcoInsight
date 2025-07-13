@@ -248,7 +248,7 @@ struct EarthPollutionView: View {
             .padding()
         }
         .navigationTitle("Environmental Impact")
-        .background(Color.white.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
     }
 }
 

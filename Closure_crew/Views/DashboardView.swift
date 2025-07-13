@@ -117,8 +117,8 @@ struct DashboardView: View {
                         .padding(.vertical, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                                .fill(Color(.secondarySystemGroupedBackground))
+                                .shadow(radius: 3, x: 0, y: 2)
                         )
                     }
                     .padding(.horizontal, 20)
@@ -148,7 +148,7 @@ struct DashboardView: View {
                 // Force reload from storage
                 historyViewModel.loadHistory()
             }
-            .background(Color.white)
+            .background(Color(.systemBackground))
         }
     }
 }
@@ -259,8 +259,8 @@ struct MainStatsCard: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .shadow(radius: 3, x: 0, y: 2)
         )
     }
     
@@ -417,7 +417,7 @@ struct EmptyScanCard: View {
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
         .opacity(0.6)
-        .background(Color.white)
+        .background(Color(.systemBackground))
     }
 }
 
@@ -480,7 +480,7 @@ struct RecentScanCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
-        .background(Color.white)
+        .background(Color(.systemBackground))
     }
 }
 
@@ -591,6 +591,6 @@ struct EcoTipCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
-        .background(Color.white)
+        .background(Color(.systemBackground))
     }
 }

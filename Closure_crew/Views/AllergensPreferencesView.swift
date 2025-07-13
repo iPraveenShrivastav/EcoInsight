@@ -24,7 +24,7 @@ struct AllergensPreferencesView: View {
                 // Common Allergens
                 Text("Common Allergens")
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                     ForEach(commonAllergens, id: \.0) { (name, icon) in
                         Button(action: {
@@ -53,7 +53,7 @@ struct AllergensPreferencesView: View {
                 // Custom Allergens
                 Text("Custom Allergens")
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 HStack {
                     TextField("Add custom allergen", text: $customAllergen)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -102,7 +102,7 @@ struct AllergensPreferencesView: View {
             }
             .padding()
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
         .navigationTitle("Allergens")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

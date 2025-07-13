@@ -88,7 +88,7 @@ struct ScanView: View {
                     print("Scanned barcode: \(product.barcode)")
                 }
             }
-            .background(Color.white.ignoresSafeArea())
+            .background(Color(.systemBackground).ignoresSafeArea())
         }
     }
     
@@ -169,7 +169,7 @@ struct ScannerOverlay: View {
         GeometryReader { geometry in
             ZStack {
                 // Semi-transparent overlay
-                Color.black.opacity(0.5)
+                Color(.label).opacity(0.5)
                     .mask(
                         Rectangle()
                             .overlay(

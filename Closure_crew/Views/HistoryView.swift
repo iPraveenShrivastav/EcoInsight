@@ -111,14 +111,14 @@ struct HistoryView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Your Impact")
                                         .font(.headline)
-                                        .foregroundColor(.black)
-                                    Text("Total CO₂e Saved")
+                                        .foregroundColor(.primary)
+                                    Text("Total CO₂e")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                     Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
                                         .font(.title2)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                 }
                                 Spacer()
                                 Button(action: { showingEnvironmentalImpact = true }) {
@@ -150,7 +150,7 @@ struct HistoryView: View {
                             HStack {
                                 Text("Recent Scans")
                                     .font(.headline)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal)
@@ -211,7 +211,7 @@ struct HistoryView: View {
                             }
                         }
                         .padding(.top, 12)
-                        .background(Color.white.ignoresSafeArea())
+                        .background(Color(.systemBackground).ignoresSafeArea())
                     }
                 }
             }

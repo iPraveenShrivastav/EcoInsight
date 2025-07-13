@@ -49,7 +49,7 @@ struct ProductImpactView: View {
         .padding()
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .shadow(color: Color(.label).opacity(0.05), radius: 8, x: 0, y: 2)
     }
     
     private var scoreColor: Color {
@@ -98,7 +98,7 @@ struct RecommendationView: View {
         .padding()
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .shadow(color: Color(.label).opacity(0.05), radius: 8, x: 0, y: 2)
     }
 }
 

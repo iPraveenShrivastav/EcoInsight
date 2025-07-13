@@ -98,7 +98,7 @@ struct ProductDetailView: View {
                 .transition(.move(edge: .bottom))
             }
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
     }
     
     private var productCard: some View {
@@ -142,7 +142,7 @@ struct ProductDetailView: View {
                         if let name = productInfo.nutrition?.item_name, !name.isEmpty {
                             Text(name)
                                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                         }
                 if let label = ecoFriendlyLabel(), !label.isEmpty {
                     Text(label)
@@ -157,9 +157,9 @@ struct ProductDetailView: View {
                     Spacer()
                 }
                 .padding()
-        .background(Color.white)
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 6)
+        .shadow(radius: 3, x: 0, y: 2)
         .padding(.horizontal)
     }
 
@@ -169,19 +169,19 @@ struct ProductDetailView: View {
                 ProgressView("Loading carbon data...")
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white)
+                    .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(15)
-                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                    .shadow(radius: 3, x: 0, y: 2)
                     .padding(.horizontal)
             } else if let carbon = carbonResult {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Carbon Footprint")
                             .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(String(format: "%.3f", carbon.totalKgCO2e))
                             .font(.title2.weight(.semibold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                         Text("kg CO₂e")
                             .font(.body)
                                 .foregroundColor(.gray)
@@ -189,15 +189,15 @@ struct ProductDetailView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white)
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(15)
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                .shadow(radius: 3, x: 0, y: 2)
                 .padding(.horizontal)
             } else if let carbonString = carbonString {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Carbon Footprint")
                         .font(.headline)
-                        .foregroundColor(.black)
+                        .foregroundColor(.primary)
                     // Always use only the last non-empty line, and extract only the first valid number
                     let lastLine = carbonString
                         .components(separatedBy: .newlines)
@@ -207,7 +207,7 @@ struct ProductDetailView: View {
                     if let value = Double(numberString) {
                         Text("\(String(format: "%.3f", value)) kg CO₂e")
                             .font(.title2.weight(.semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                     } else {
                         Text("Not available")
                             .font(.title2.weight(.semibold))
@@ -216,18 +216,18 @@ struct ProductDetailView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white)
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(15)
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                .shadow(radius: 3, x: 0, y: 2)
                 .padding(.horizontal)
             } else if let error = carbonError {
                 Text(error)
                     .foregroundColor(.red)
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white)
+                    .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(15)
-                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                    .shadow(radius: 3, x: 0, y: 2)
                     .padding(.horizontal)
             }
         }
@@ -239,7 +239,7 @@ struct ProductDetailView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Nutrition Facts")
                             .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                     let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
                     LazyVGrid(columns: gridItems, spacing: 16) {
                         nutritionFactGridCell(label: "Calories", value: "\(facts.nf_calories ?? 0)", unit: "kcal")
@@ -249,9 +249,9 @@ struct ProductDetailView: View {
                     }
                 }
                 .padding()
-                .background(Color.white)
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(15)
-                .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 6)
+                .shadow(radius: 3, x: 0, y: 2)
                 .padding(.horizontal)
             }
         }
@@ -359,9 +359,9 @@ struct ProductDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
-                        .background(Color.white)
+                        .background(Color(.secondarySystemGroupedBackground))
                         .cornerRadius(15)
-                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                        .shadow(radius: 3, x: 0, y: 2)
                         .padding(.horizontal, 16)
                         
                         // Alternatives cards
@@ -413,9 +413,9 @@ struct ProductDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
-                        .background(Color.white)
+                        .background(Color(.secondarySystemGroupedBackground))
                         .cornerRadius(15)
-                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                        .shadow(radius: 3, x: 0, y: 2)
                         .padding(.horizontal, 16)
                         // No card below
                     }
@@ -452,15 +452,15 @@ struct ProductDetailView: View {
                         .padding(.vertical, 6)
                         .background(Color.red)
                         .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                        .shadow(radius: 3, x: 0, y: 2)
                     Spacer()
                 }
                 Spacer(minLength: 12)
             }
             .padding(24)
-            .background(Color.white)
+            .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(15)
-            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+            .shadow(radius: 3, x: 0, y: 2)
         }
     }
 
@@ -557,7 +557,7 @@ struct ProductDetailView: View {
                                     .background(
                                         Capsule()
                                             .fill(Color.red.opacity(0.9))
-                                            .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                            .shadow(radius: 3, x: 0, y: 2)
                                     )
                                 }
                                 .padding(.top, 12)
@@ -581,7 +581,7 @@ struct ProductDetailView: View {
                                     .background(
                                         Capsule()
                                             .fill(Color.green.opacity(0.9))
-                                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+                                            .shadow(radius: 3, x: 0, y: 2)
                                     )
                                     Spacer()
                                 }
@@ -653,7 +653,7 @@ struct ProductDetailView: View {
                                 )
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .shadow(color: Color.green.opacity(0.3), radius: 6, x: 0, y: 3)
+                            .shadow(radius: 3, x: 0, y: 2)
                         }
                         .disabled(isLoading)
                         .scaleEffect(isPressed ? 0.98 : 1.0)
@@ -665,9 +665,9 @@ struct ProductDetailView: View {
                     .padding(20)
                 }
             }
-            .background(Color.white)
+            .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(15)
-            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+            .shadow(radius: 3, x: 0, y: 2)
             .onAppear {
                 if imageUrl == nil && !isLoadingImage {
                     isLoadingImage = true
@@ -813,7 +813,7 @@ Product details:
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 Text(unit)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.gray)
@@ -821,7 +821,7 @@ Product details:
         }
         .frame(maxWidth: .infinity, minHeight: 56)
         .padding(8)
-        .background(Color.white)
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(12)
     }
     // Add this helper to parse only the value from a JSON string or code block
@@ -854,7 +854,7 @@ extension ProductDetailView {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
                     .font(.title3.weight(.semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 Text(unit)
                     .font(.footnote)
                     .foregroundColor(.secondary)
