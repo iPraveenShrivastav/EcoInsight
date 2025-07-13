@@ -1,70 +1,165 @@
 import SwiftUI
 import AVFoundation
 
+// Set your Gemini API key here
+let GEMINI_API_KEY = "AIzaSyChk26SFhMAhZIUVMnYNPwXdoREpT1iUg0"
+
 struct ScanView: View {
     @StateObject private var scannerViewModel: ScannerViewModel
     @State private var showingScanner = false
+    @State private var selectedProduct: ProductInfo? = nil
+    
+    // Hardcoded alternatives for Häagen‑Dazs Vanilla Ice Cream
+    private let haagenDazsAlternatives = [
+        AlternativeProduct(
+            name: "Oatly Vanilla Frozen Dessert",
+            brandOrType: "Plant-based dessert · Frozen foods",
+            imageUrl: "https://world.openfoodfacts.org/images/products/17988807/front_en.8.full.jpg",
+            description: "Gluten-free, Dairy-free, Egg-free",
+            nutrition: nil,
+            allergens: [],
+            barcode: "17988807"
+        ),
+        AlternativeProduct(
+            name: "Alpro Vanilla Dessert",
+            brandOrType: "Plant-based dessert",
+            imageUrl: "https://world.openfoodfacts.org/images/products/541/118/811/0521/front_en.10.full.jpg",
+            description: "Contains soy; Dairy-free, Egg-free",
+            nutrition: nil,
+            allergens: ["soy"],
+            barcode: "5411188110521"
+        ),
+        AlternativeProduct(
+            name: "Vanilla Bean Dessert – Nora's",
+            brandOrType: "Cashew & coconut cream base",
+            imageUrl: "https://world.openfoodfacts.org/images/products/062/784/381/4238/front_en.8.full.jpg",
+            description: "Dairy-free, Egg-free",
+            nutrition: nil,
+            allergens: ["cashew"],
+            barcode: "0627843814238"
+        )
+    ]
     
     init(historyViewModel: HistoryViewModel) {
         _scannerViewModel = StateObject(wrappedValue: ScannerViewModel(historyViewModel: historyViewModel))
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                if scannerViewModel.isLoading {
-                    ProgressView("Loading product information...")
-                } else if let error = scannerViewModel.error {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
-                            .foregroundColor(.orange)
-                        Text(error)
-                            .multilineTextAlignment(.center)
-                        // Display the scanned barcode when product is not found
-                        if let code = scannerViewModel.scannedCode {
-                            Text("Scanned Barcode: \(code)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } else if let product = scannerViewModel.scannedProduct {
-                    ProductImpactView(product: product)
-                } else {
-                    VStack(spacing: 16) {
-                        Image(systemName: "barcode.viewfinder")
-                            .font(.system(size: 100))
-                            .foregroundColor(.green)
-                        
-                        Text("Scan Product Barcode")
-                            .font(.title2)
-                            .fontWeight(.medium)
-                        
-                        Text("Supports EAN-8, EAN-13, and UPC-E barcodes")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                }
+        NavigationStack {
+            ZStack {
+                // Background
+                Color(.systemBackground)
+                    .edgesIgnoringSafeArea(.all)
                 
-                Button(action: {
-                    showingScanner = true
-                }) {
-                    Label("Scan Barcode", systemImage: "barcode.viewfinder")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(10)
+                VStack(spacing: 0) {
+                    if scannerViewModel.isLoading {
+                        loadingView
+                    } else if let error = scannerViewModel.error {
+                        errorView(error)
+                    } else {
+                        scanLandingView
+                    }
                 }
             }
-            .padding()
             .sheet(isPresented: $showingScanner) {
                 BarcodeScannerView(scannedCode: $scannerViewModel.scannedCode)
             }
             .navigationTitle("Scan")
+            .onChange(of: scannerViewModel.productInfo) { newProduct in
+                if let info = newProduct {
+                    selectedProduct = info
+                }
+            }
+            .navigationDestination(item: $selectedProduct) { product in
+                let normalizedBarcode = product.barcode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let validBarcodes = ["055000205528", "0055000205528"]
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                let showAlternatives = validBarcodes.contains(normalizedBarcode)
+                return ProductDetailView(
+                    productInfo: product,
+                    scannerViewModel: scannerViewModel,
+                    onBack: {
+                        selectedProduct = nil
+                        scannerViewModel.productInfo = nil
+                    },
+                    alternatives: showAlternatives ? haagenDazsAlternatives : nil
+                )
+                .onAppear {
+                    print("Scanned barcode: \(product.barcode)")
+                }
+            }
+            .background(Color(.systemBackground).ignoresSafeArea())
         }
+    }
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+            Text("Loading product information...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityLabel("Loading product information")
+    }
+    
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 56))
+                .foregroundColor(.orange)
+            
+            Text(error)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 32)
+            
+            if let code = scannerViewModel.scannedCode {
+                Text("Scanned Barcode: \(code)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 8)
+            }
+            
+            Button(action: { showingScanner = true }) {
+                Text("Try Again")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(width: 200)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .cornerRadius(12)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityLabel("Error: \(error)")
+    }
+    
+    private var scanLandingView: some View {
+        VStack(spacing: 32) {
+            Spacer()
+            Image(systemName: "barcode.viewfinder")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 100)
+                .foregroundColor(.green)
+            Text("Ready to scan a product?")
+                .font(.title2)
+                .fontWeight(.semibold)
+                    Button(action: { showingScanner = true }) {
+                Text("Scan Product")
+                    .font(.headline)
+                            .foregroundColor(.white)
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 40)
+                            .background(Color.green)
+                    .cornerRadius(14)
+                    }
+            Spacer()
+                    }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -73,31 +168,63 @@ struct ScannerOverlay: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color.black.opacity(0.5)
+                // Semi-transparent overlay
+                Color(.label).opacity(0.5)
                     .mask(
                         Rectangle()
                             .overlay(
-                                Rectangle()
-                                    .frame(width: geometry.size.width * 0.7,
-                                         height: geometry.size.width * 0.3)
+                                RoundedRectangle(cornerRadius: 24)
+                                    .frame(
+                                        width: geometry.size.width * 0.85,
+                                        height: geometry.size.width * 0.85
+                                    )
                                     .blendMode(.destinationOut)
                             )
                     )
                 
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.green, lineWidth: 3)
-                    .frame(width: geometry.size.width * 0.7,
-                          height: geometry.size.width * 0.3)
+                // Scanning frame
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.green.opacity(0.8), lineWidth: 2)
+                    .frame(
+                        width: geometry.size.width * 0.85,
+                        height: geometry.size.width * 0.85
+                    )
                 
-                VStack {
-                    Spacer()
-                    Text("Align barcode within frame")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        .padding(.bottom, 20)
+                // Corner markers
+                ZStack {
+                    // Top left
+                    Path { path in
+                        path.move(to: CGPoint(x: -40, y: 4))
+                        path.addLine(to: CGPoint(x: 4, y: 4))
+                        path.addLine(to: CGPoint(x: 4, y: 44))
+                    }
+                    .stroke(Color.green, lineWidth: 4)
+                    
+                    // Top right
+                    Path { path in
+                        path.move(to: CGPoint(x: geometry.size.width * 0.85 + 40, y: 4))
+                        path.addLine(to: CGPoint(x: geometry.size.width * 0.85 - 4, y: 4))
+                        path.addLine(to: CGPoint(x: geometry.size.width * 0.85 - 4, y: 44))
+                    }
+                    .stroke(Color.green, lineWidth: 4)
+                    
+                    // Bottom left
+                    Path { path in
+                        path.move(to: CGPoint(x: 4, y: geometry.size.width * 0.85 - 44))
+                        path.addLine(to: CGPoint(x: 4, y: geometry.size.width * 0.85 - 4))
+                        path.addLine(to: CGPoint(x: 44, y: geometry.size.width * 0.85 - 4))
+                    }
+                    .stroke(Color.green, lineWidth: 4)
+                    
+                    // Bottom right
+                    Path { path in
+                        path.move(to: CGPoint(x: geometry.size.width * 0.85 - 4, y: geometry.size.width * 0.85 - 44))
+                        path.addLine(to: CGPoint(x: geometry.size.width * 0.85 - 4, y: geometry.size.width * 0.85 - 4))
+                        path.addLine(to: CGPoint(x: geometry.size.width * 0.85 - 44, y: geometry.size.width * 0.85 - 4))
+                    }
+                    .stroke(Color.green, lineWidth: 4)
                 }
             }
         }
-        .edgesIgnoringSafeArea(.all)
     }
-} 
+}

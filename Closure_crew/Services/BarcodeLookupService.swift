@@ -74,7 +74,9 @@ actor BarcodeLookupService {
                 productName: productName,
                 packaging: determinePackaging(product),
                 packagingTags: determinePackagingTags(product),
-                carbonFootprint: estimateCarbonFootprint(product)
+                carbonFootprint: estimateCarbonFootprint(product),
+                ecoScore: nil,
+                ecoScoreGrade: nil
             ),
             status: 1
         )

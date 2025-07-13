@@ -247,8 +247,9 @@ struct EarthPollutionView: View {
             }
             .padding()
         }
+        .scrollIndicators(.hidden)
         .navigationTitle("Environmental Impact")
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground).ignoresSafeArea())
     }
 }
 
@@ -263,7 +264,7 @@ struct CardView<Content: View>: View {
     var body: some View {
         content
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(15)
             .shadow(radius: 3, x: 0, y: 2)
     }

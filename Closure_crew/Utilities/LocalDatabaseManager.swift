@@ -43,7 +43,9 @@ class LocalDatabaseManager {
                     productName: product.name,
                     packaging: "Plastic wrapper",
                     packagingTags: ["plastic", "recyclable"],
-                    carbonFootprint: "1.5kg CO2"
+                    carbonFootprint: "1.5kg CO2",
+                    ecoScore: nil,
+                    ecoScoreGrade: nil
                 ),
                 status: 1
             )

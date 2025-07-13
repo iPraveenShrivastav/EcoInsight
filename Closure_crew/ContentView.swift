@@ -20,18 +20,30 @@ struct ContentView: View {
                 .tabItem {
                     Label("EcoScan", systemImage: "globe.americas.fill")
                 }
+                .onAppear {
+                    print("📱 ContentView: Dashboard tab appeared")
+                }
             
             ScanView(historyViewModel: historyViewModel)
                 .tabItem {
                     Label("Scan", systemImage: "barcode.viewfinder")
+                }
+                .onAppear {
+                    print("📱 ContentView: Scan tab appeared")
                 }
             
             HistoryView(viewModel: historyViewModel)
                 .tabItem {
                     Label("History", systemImage: "clock.arrow.circlepath")
                 }
+                .onAppear {
+                    print("📱 ContentView: History tab appeared")
+                }
         }
         .accentColor(.green)
+        .onChange(of: historyViewModel.scannedProducts.count) { count in
+            print("📱 ContentView: Products count changed to \(count)")
+        }
     }
 }
 

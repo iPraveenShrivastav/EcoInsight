@@ -10,22 +10,9 @@
 		C1098A6E2E1E32CB004EE328 /* Closure_crew.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Closure_crew.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C19AFC6A2E1E33FA00900C2F /* Exceptions for "Closure_crew" folder in "Closure_crew" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Closure-crew-Info.plist",
-			);
-			target = C1098A6D2E1E32CB004EE328 /* Closure_crew */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C1098A702E1E32CB004EE328 /* Closure_crew */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C19AFC6A2E1E33FA00900C2F /* Exceptions for "Closure_crew" folder in "Closure_crew" target */,
-			);
 			path = Closure_crew;
 			sourceTree = "<group>";
 		};
