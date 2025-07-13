@@ -98,6 +98,7 @@ struct ProductDetailView: View {
                 .transition(.move(edge: .bottom))
             }
         }
+        .background(Color.white.ignoresSafeArea())
     }
     
     private var productCard: some View {
@@ -156,11 +157,10 @@ struct ProductDetailView: View {
                     Spacer()
                 }
                 .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.white)
         .cornerRadius(15)
-        .shadow(radius: 5)
-                .padding(.horizontal)
+        .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 6)
+        .padding(.horizontal)
     }
 
     private var carbonFootprintCard: some View {
@@ -169,9 +169,9 @@ struct ProductDetailView: View {
                 ProgressView("Loading carbon data...")
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemBackground))
+                    .background(Color.white)
                     .cornerRadius(15)
-                    .shadow(radius: 5)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                     .padding(.horizontal)
             } else if let carbon = carbonResult {
                     VStack(alignment: .leading, spacing: 16) {
@@ -189,9 +189,9 @@ struct ProductDetailView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemBackground))
+                .background(Color.white)
                 .cornerRadius(15)
-                .shadow(radius: 5)
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                 .padding(.horizontal)
             } else if let carbonString = carbonString {
                 VStack(alignment: .leading, spacing: 16) {
@@ -216,18 +216,18 @@ struct ProductDetailView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemBackground))
+                .background(Color.white)
                 .cornerRadius(15)
-                .shadow(radius: 5)
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                 .padding(.horizontal)
             } else if let error = carbonError {
                 Text(error)
                     .foregroundColor(.red)
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemBackground))
+                    .background(Color.white)
                     .cornerRadius(15)
-                    .shadow(radius: 5)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                     .padding(.horizontal)
             }
         }
@@ -249,9 +249,9 @@ struct ProductDetailView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color.white)
                 .cornerRadius(15)
-                .shadow(radius: 5)
+                .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 6)
                 .padding(.horizontal)
             }
         }
@@ -359,9 +359,9 @@ struct ProductDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
-                        .background(Color(.systemBackground))
+                        .background(Color.white)
                         .cornerRadius(15)
-                        .shadow(radius: 5)
+                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                         .padding(.horizontal, 16)
                         
                         // Alternatives cards
@@ -413,9 +413,9 @@ struct ProductDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
-                        .background(Color(.systemBackground))
+                        .background(Color.white)
                         .cornerRadius(15)
-                        .shadow(radius: 5)
+                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                         .padding(.horizontal, 16)
                         // No card below
                     }
@@ -458,9 +458,9 @@ struct ProductDetailView: View {
                 Spacer(minLength: 12)
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.white)
             .cornerRadius(15)
-            .shadow(radius: 5)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
         }
     }
 
@@ -665,9 +665,9 @@ struct ProductDetailView: View {
                     .padding(20)
                 }
             }
-            .background(Color(.systemBackground))
+            .background(Color.white)
             .cornerRadius(15)
-            .shadow(radius: 5)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
             .onAppear {
                 if imageUrl == nil && !isLoadingImage {
                     isLoadingImage = true

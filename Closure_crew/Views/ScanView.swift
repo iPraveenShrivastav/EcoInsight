@@ -15,13 +15,13 @@ struct ScanView: View {
             name: "Oatly Vanilla Frozen Dessert",
             brandOrType: "Plant-based dessert · Frozen foods",
             imageUrl: "https://world.openfoodfacts.org/images/products/17988807/front_en.8.full.jpg",
-            description: "Gluten-free, Dairy-free, Egg-free, Soy-free, Nut-free",
+            description: "Gluten-free, Dairy-free, Egg-free",
             nutrition: nil,
             allergens: [],
             barcode: "17988807"
         ),
         AlternativeProduct(
-            name: "Alpro Vanilla Flavoured Plant-Based Dessert",
+            name: "Alpro Vanilla Dessert",
             brandOrType: "Plant-based dessert",
             imageUrl: "https://world.openfoodfacts.org/images/products/541/118/811/0521/front_en.10.full.jpg",
             description: "Contains soy; Dairy-free, Egg-free",
@@ -30,10 +30,10 @@ struct ScanView: View {
             barcode: "5411188110521"
         ),
         AlternativeProduct(
-            name: "Vanilla Bean Non‑Dairy Frozen Dessert – Nora’s",
+            name: "Vanilla Bean Dessert – Nora's",
             brandOrType: "Cashew & coconut cream base",
             imageUrl: "https://world.openfoodfacts.org/images/products/062/784/381/4238/front_en.8.full.jpg",
-            description: "Contains tree nuts (cashews), no dairy or eggs",
+            description: "Dairy-free, Egg-free",
             nutrition: nil,
             allergens: ["cashew"],
             barcode: "0627843814238"
@@ -88,6 +88,7 @@ struct ScanView: View {
                     print("Scanned barcode: \(product.barcode)")
                 }
             }
+            .background(Color.white.ignoresSafeArea())
         }
     }
     

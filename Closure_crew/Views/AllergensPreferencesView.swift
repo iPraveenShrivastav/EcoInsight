@@ -37,9 +37,10 @@ struct AllergensPreferencesView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: icon)
                                 Text(name)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44)
                             .background(selectedAllergens.contains(name) ? Color.green : Color(.systemGray6))
                             .foregroundColor(selectedAllergens.contains(name) ? .white : .primary)
                             .clipShape(Capsule())
@@ -101,7 +102,7 @@ struct AllergensPreferencesView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.white.ignoresSafeArea())
         .navigationTitle("Allergens")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

@@ -54,6 +54,16 @@ struct DashboardView: View {
                     RecentScansSection(historyViewModel: historyViewModel)
                         .padding(.bottom, 30)
                     
+                    // Allergens Section Header
+                    HStack {
+                        Text("Allergens")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
                     // Allergens Card (moved from bottom)
                     NavigationLink(destination: AllergensPreferencesView()) {
                         HStack(spacing: 16) {

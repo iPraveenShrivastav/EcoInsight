@@ -125,18 +125,25 @@ struct HistoryView: View {
                                     HStack {
                                         Image(systemName: "leaf.circle.fill")
                                         Text("Environmental Impact")
+                                            .fontWeight(.semibold)
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
                                     .background(Color.green.opacity(0.15))
-                                    .foregroundColor(.green)
-                                    .clipShape(Capsule())
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 25)
+                                            .stroke(Color.green, lineWidth: 1.5)
+                                    )
+                                    .cornerRadius(25)
+                                    .shadow(color: Color.green.opacity(0.15), radius: 4, x: 0, y: 2)
                                 }
+                                .foregroundColor(.green)
+                                .buttonStyle(PlainButtonStyle())
                             }
                             .padding()
-                            .background(Color.white)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(15)
+                            .shadow(radius: 3, x: 0, y: 2)
                             .padding(.horizontal)
 
                             // Recent Scans Header
@@ -191,16 +198,18 @@ struct HistoryView: View {
                                             }
                                         }
                                         .padding()
-                                        .background(Color.white)
+                                        .background(Color(.secondarySystemGroupedBackground))
                                         .cornerRadius(16)
-                                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                                        .shadow(radius: 3, x: 0, y: 2)
                                         .padding(.horizontal)
                                     }
                                 }
+                                .padding(.top, 8)
                                 .padding(.bottom, 16)
                             }
                         }
                         .padding(.top, 12)
+                        .background(Color.white.ignoresSafeArea())
                     }
                 }
             }

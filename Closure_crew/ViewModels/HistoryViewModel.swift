@@ -10,10 +10,14 @@ class HistoryViewModel: ObservableObject {
     }
     
     func addScan(_ product: Product) {
+        print("📱 HistoryViewModel: Adding product to history - \(product.name) (barcode: \(product.code))")
         // Prevent duplicate barcodes in history
         if !scannedProducts.contains(where: { $0.code == product.code }) {
             scannedProducts.insert(product, at: 0)
+            print("📱 HistoryViewModel: Product added successfully. Total products: \(scannedProducts.count)")
             saveHistory()
+        } else {
+            print("📱 HistoryViewModel: Product already exists in history, skipping")
         }
     }
     
@@ -35,11 +39,14 @@ class HistoryViewModel: ObservableObject {
         loadHistory() // Ensure in-memory and storage are in sync
     }
     
-    private func loadHistory() {
+    func loadHistory() {
+        print("📱 HistoryViewModel: Loading history from storage")
         scannedProducts = historyStorage.load()
+        print("📱 HistoryViewModel: Loaded \(scannedProducts.count) products from storage")
     }
     
     private func saveHistory() {
+        print("📱 HistoryViewModel: Saving \(scannedProducts.count) products to storage")
         historyStorage.save(scannedProducts)
     }
 } 

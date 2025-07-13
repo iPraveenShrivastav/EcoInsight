@@ -100,7 +100,9 @@ class ScannerViewModel: ObservableObject {
                     scannedAt: Date(),
                     imageUrl: info.productImageUrl
                 )
+                print("📱 ScannerViewModel: About to add product to history - \(productForHistory.name)")
                 self.historyViewModel.addScan(productForHistory)
+                print("📱 ScannerViewModel: Product added to history successfully")
                 
             } catch {
                 print("❌ Error fetching product: \(error)")
