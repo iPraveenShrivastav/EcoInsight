@@ -65,7 +65,7 @@ struct DashboardView: View {
                     
                     // Allergens Section Header
                     HStack {
-                        Text("Allergens")
+                        Text("Set Your Allergens")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
@@ -340,35 +340,42 @@ struct RecentScansSection: View {
 // MARK: - Empty Recent Scans View
 struct EmptyRecentScansView: View {
     var body: some View {
-        VStack(spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    // Placeholder Card 1
-                    EmptyScanCard(
-                        icon: "barcode.viewfinder",
-                        title: "Start Scanning",
-                        subtitle: "Scan your product",
-                        color: .blue
-                    )
-                    
-                    // Placeholder Card 2
-                    EmptyScanCard(
-                        icon: "leaf.circle.fill",
-                        title: "Track Impact",
-                        subtitle: "See eco data",
-                        color: .green
-                    )
-                    
-                    // Placeholder Card 3
-                    EmptyScanCard(
-                        icon: "chart.line.uptrend.xyaxis",
-                        title: "Build History",
-                        subtitle: "Monitor your data",
-                        color: .orange
-                    )
+        VStack(spacing: 0) {
+            VStack(spacing: 14) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.12))
+                        .frame(width: 54, height: 54)
+                    Image(systemName: "barcode.viewfinder")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundColor(.green)
                 }
-                .padding(.horizontal, 20)
+                // Title
+                Text("No Scans Yet")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                // Subtitle
+                Text("Scan a product to discover its eco impact and allergen info!")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color(.systemGray5), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
     }
 }
@@ -486,7 +493,7 @@ struct RecentScanCard: View {
 
 // MARK: - Eco Tips Section
 struct EcoTipsSection: View {
-    @State private var scrollOffset: CGFloat = 0
+    @State private var currentIndex: Int = 0
     @State private var timer: Timer?
     private let cardWidth: CGFloat = 136 // 120 width + 16 spacing
     
@@ -520,8 +527,8 @@ struct EcoTipsSection: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .offset(x: scrollOffset)
-                .animation(.easeInOut(duration: 1.0), value: scrollOffset)
+                .offset(x: -CGFloat(currentIndex) * cardWidth)
+                .animation(.easeInOut(duration: 1.0), value: currentIndex)
             }
             .frame(height: 160)
             .clipped()
@@ -535,15 +542,15 @@ struct EcoTipsSection: View {
     }
     
     private func startAutoScroll() {
+        stopAutoScroll()
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 1.0)) {
-                scrollOffset -= cardWidth
-                
-                // Reset position when scrolled through one complete set
-                let maxOffset = cardWidth * CGFloat(tips.count)
-                if abs(scrollOffset) >= maxOffset {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-                        scrollOffset = 0
+                if currentIndex < tips.count - 1 {
+                    currentIndex += 1
+                } else {
+                    // Pause on last card, then reset to first after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        currentIndex = 0
                     }
                 }
             }
