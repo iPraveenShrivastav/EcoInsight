@@ -185,7 +185,8 @@ struct HistoryView: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(product.name)
                                                     .font(.headline)
-                                                    .foregroundColor(.black)
+                                                    .lineLimit(2)
+                                                    .truncationMode(.tail)
                                                 Text(scanTimeString(for: product.scannedAt))
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
@@ -201,6 +202,7 @@ struct HistoryView: View {
                                         .background(Color(.secondarySystemGroupedBackground))
                                         .cornerRadius(16)
                                         .shadow(radius: 3, x: 0, y: 2)
+                                        .frame(minHeight: 80) // Ensures all cards have the same minimum height
                                         .padding(.horizontal)
                                     }
                                 }

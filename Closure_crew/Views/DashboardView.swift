@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var historyViewModel: HistoryViewModel
     @AppStorage("selectedAllergens") private var selectedAllergensString: String = ""
+    @State private var refreshTrigger = false
     
     private var selectedAllergens: [String] {
         selectedAllergensString.isEmpty ? [] : selectedAllergensString.split(separator: ",").map { String($0) }
@@ -19,7 +20,7 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header with greeting
@@ -37,6 +38,7 @@ struct DashboardView: View {
                                     .multilineTextAlignment(.leading)
                             }
                             Spacer()
+                            // Removed refresh button
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
@@ -53,6 +55,13 @@ struct DashboardView: View {
                     // Recent Scans Section
                     RecentScansSection(historyViewModel: historyViewModel)
                         .padding(.bottom, 30)
+                        .id(refreshTrigger)
+                        .onAppear {
+                            print("📱 DashboardView: RecentScansSection appeared with \(historyViewModel.scannedProducts.count) products")
+                        }
+                        .onChange(of: historyViewModel.scannedProducts.count) { count in
+                            print("📱 DashboardView: Products count changed to \(count)")
+                        }
                     
                     // Allergens Section Header
                     HStack {
@@ -121,6 +130,25 @@ struct DashboardView: View {
                         .padding(.bottom, 30)
                 }
             }
+            .onAppear {
+                print("📱 DashboardView: Main view appeared with \(historyViewModel.scannedProducts.count) products")
+                // Force refresh when view appears
+                refreshTrigger.toggle()
+            }
+            .onChange(of: historyViewModel.scannedProducts.count) { count in
+                print("📱 DashboardView: Main view - Products count changed to \(count)")
+                // Force refresh when products change
+                refreshTrigger.toggle()
+            }
+            .onReceive(historyViewModel.$scannedProducts) { products in
+                print("📱 DashboardView: Received products update - \(products.count) products")
+            }
+            .refreshable {
+                print("📱 DashboardView: Pull to refresh triggered")
+                // Force reload from storage
+                historyViewModel.loadHistory()
+            }
+            .background(Color.white)
         }
     }
 }
@@ -162,7 +190,7 @@ func parseCO2Value(_ value: String?) -> Double? {
 
 // MARK: - Main Stats Card
 struct MainStatsCard: View {
-    let historyViewModel: HistoryViewModel
+    @ObservedObject var historyViewModel: HistoryViewModel
     
     var totalCarbonFootprint: Double {
         let products = historyViewModel.scannedProducts
@@ -273,7 +301,7 @@ struct MainStatsCard: View {
 
 // MARK: - Recent Scans Section
 struct RecentScansSection: View {
-    let historyViewModel: HistoryViewModel
+    @ObservedObject var historyViewModel: HistoryViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -291,7 +319,7 @@ struct RecentScansSection: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
-                        ForEach(Array(historyViewModel.scannedProducts.prefix(3).enumerated()), id: \.offset) { index, product in
+                        ForEach(Array(historyViewModel.scannedProducts.prefix(3).enumerated()), id: \.element.id) { index, product in
                             RecentScanCard(product: product)
                         }
                     }
@@ -299,6 +327,12 @@ struct RecentScansSection: View {
                 }
                 .padding(.bottom, 10)
             }
+        }
+        .onAppear {
+            print("RecentScansSection appeared with \(historyViewModel.scannedProducts.count) products")
+        }
+        .onChange(of: historyViewModel.scannedProducts.count) { count in
+            print("RecentScansSection: Products count changed to \(count)")
         }
     }
 }
@@ -383,6 +417,7 @@ struct EmptyScanCard: View {
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
         .opacity(0.6)
+        .background(Color.white)
     }
 }
 
@@ -445,6 +480,7 @@ struct RecentScanCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
+        .background(Color.white)
     }
 }
 
@@ -555,5 +591,6 @@ struct EcoTipCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color(.systemGray5), lineWidth: 1)
         )
+        .background(Color.white)
     }
 }
