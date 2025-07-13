@@ -209,6 +209,7 @@ struct HistoryView: View {
                                 .padding(.top, 8)
                                 .padding(.bottom, 16)
                             }
+                            .scrollIndicators(.hidden)
                         }
                         .padding(.top, 12)
                         .background(Color(.systemBackground).ignoresSafeArea())

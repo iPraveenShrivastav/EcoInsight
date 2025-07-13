@@ -130,6 +130,7 @@ struct DashboardView: View {
                         .padding(.bottom, 30)
                 }
             }
+            .scrollIndicators(.hidden)
             .onAppear {
                 print("📱 DashboardView: Main view appeared with \(historyViewModel.scannedProducts.count) products")
                 // Force refresh when view appears

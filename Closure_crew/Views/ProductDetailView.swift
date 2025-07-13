@@ -36,93 +36,6 @@ struct ProductDetailView: View {
         set { selectedAllergensRaw = newValue.joined(separator: ",") }
     }
     
-    // Computed properties for allergen matching (outside view builders)
-    private var userAllergensMatching: [String] {
-        guard !selectedAllergensRaw.isEmpty else { return [] }
-        
-        let userAllergens = Set(selectedAllergensRaw.split(separator: ",").map { String($0) })
-        let productIngredients = (productInfo.ingredients ?? "").lowercased()
-        
-        print("🔍 Debug - User allergens: \(userAllergens)")
-        print("🔍 Debug - Product ingredients: \(productIngredients)")
-        
-        // Enhanced allergen matching with synonyms and case variations
-        let matching = userAllergens.filter { allergen in
-            let allergenLower = allergen.lowercased()
-            let synonyms = getAllergenSynonyms(for: allergenLower)
-            
-            print("🔍 Debug - Checking allergen: \(allergen) with synonyms: \(synonyms)")
-            
-            // Check if any synonym is found in ingredients
-            let found = synonyms.contains { synonym in
-                productIngredients.contains(synonym.lowercased())
-            }
-            
-            print("🔍 Debug - Found match for \(allergen): \(found)")
-            return found
-        }
-        
-        print("🔍 Debug - Final matching allergens: \(matching)")
-        return Array(matching)
-    }
-    
-    private var productAllergensMatching: [String] {
-        guard let allergens = productInfo.allergens else { return [] }
-        
-        print("🔍 Debug - Product allergens: \(allergens)")
-        print("🔍 Debug - Selected allergens: \(selectedAllergens)")
-        
-        // Enhanced allergen matching with synonyms and case variations
-        let matching = selectedAllergens.filter { userAllergen in
-            let userAllergenLower = userAllergen.lowercased()
-            let synonyms = getAllergenSynonyms(for: userAllergenLower)
-            
-            print("🔍 Debug - Checking product allergen: \(userAllergen) with synonyms: \(synonyms)")
-            
-            // Check if any product allergen matches any synonym
-            let found = allergens.contains { productAllergen in
-                let productAllergenLower = productAllergen.lowercased()
-                let match = synonyms.contains { synonym in
-                    productAllergenLower.contains(synonym.lowercased())
-                }
-                print("🔍 Debug - Product allergen '\(productAllergen)' matches '\(userAllergen)': \(match)")
-                return match
-            }
-            
-            print("🔍 Debug - Found match for \(userAllergen): \(found)")
-            return found
-        }
-        
-        print("🔍 Debug - Final matching product allergens: \(matching)")
-        return Array(matching)
-    }
-
-    // Combined allergen matching for a single warning
-    private var combinedAllergenMatches: [String] {
-        Array(Set(userAllergensMatching + productAllergensMatching)).sorted()
-    }
-
-    // Single combined allergen warning card
-    private var combinedAllergenWarning: some View {
-        Group {
-            if !combinedAllergenMatches.isEmpty {
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text("Contains: \(combinedAllergenMatches.joined(separator: ", ").capitalized)")
-                        .font(.body.weight(.semibold))
-                        .foregroundColor(.brown)
-                        .multilineTextAlignment(.leading)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.yellow.opacity(0.18))
-                .cornerRadius(14)
-                .padding(.horizontal)
-            }
-        }
-    }
-
     var body: some View {
         ZStack(alignment: .bottom) {
         ScrollView {
@@ -130,8 +43,7 @@ struct ProductDetailView: View {
                     productCard
                     carbonFootprintCard
                     nutritionFactsCard
-                    combinedAllergenWarning
-                    
+                    allergenWarningCard
                     if !isAlternative {
                         alternativesSection
                     }
@@ -140,6 +52,7 @@ struct ProductDetailView: View {
                 .padding(.top, 8)
                 .padding(.bottom, isAlternative ? 80 : 8) // Add space for button if needed
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("Product Insights")
             .navigationBarTitleDisplayMode(.large)
             .sheet(item: $altDetailProduct) { altProduct in
@@ -354,127 +267,57 @@ struct ProductDetailView: View {
 
     private var userAllergensWarning: some View {
         Group {
-            if !userAllergensMatching.isEmpty {
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text("Contains: \(userAllergensMatching.sorted().joined(separator: ", ").capitalized)")
-                        .font(.body.weight(.semibold))
-                        .foregroundColor(.brown)
-                        .multilineTextAlignment(.leading)
+            if let userAllergensRaw = UserDefaults.standard.string(forKey: "selectedAllergens"),
+               !userAllergensRaw.isEmpty {
+                let userAllergens = Set(userAllergensRaw.split(separator: ",").map { String($0) })
+                let productIngredients = (productInfo.ingredients ?? "").lowercased()
+                let matching = userAllergens.filter { productIngredients.contains($0) }
+                if !matching.isEmpty {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Contains: \(matching.sorted().joined(separator: ", ").capitalized)")
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(.brown)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.yellow.opacity(0.18))
+                    .cornerRadius(14)
+                    .padding(.horizontal)
                 }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.yellow.opacity(0.18))
-                .cornerRadius(14)
-                .padding(.horizontal)
             }
         }
-    }
-    
+                }
+                
     private var productAllergensWarning: some View {
         Group {
-            if !productAllergensMatching.isEmpty {
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.brown)
-                    Text("Contains: \(productAllergensMatching.sorted().joined(separator: ", "))")
-                        .font(.body.weight(.semibold))
-                        .foregroundColor(.brown)
-                        .multilineTextAlignment(.leading)
+                if let allergens = productInfo.allergens {
+                    let matching = Set(allergens).intersection(selectedAllergens)
+                    if !matching.isEmpty {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.brown)
+                            Text("Contains: \(matching.sorted().joined(separator: ", "))")
+                                .font(.body.weight(.semibold))
+                                .foregroundColor(.brown)
+                            .multilineTextAlignment(.leading)
+                        }
+                        .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.yellow.opacity(0.18))
+                        .cornerRadius(14)
+                        .padding(.horizontal)
+                    }
                 }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.yellow.opacity(0.18))
-                .cornerRadius(14)
-                .padding(.horizontal)
-            }
         }
-    }
-    
-    // Debug card for allergen troubleshooting
-    private var debugAllergenCard: some View {
-        CardView {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("🔍 Debug Info")
-                    .font(.headline)
-                    .foregroundColor(.orange)
-                
-                Text("Selected Allergens: \(selectedAllergensRaw.isEmpty ? "None" : selectedAllergensRaw)")
-                    .font(.caption)
-                
-                Text("Product Allergens: \(productInfo.allergens?.joined(separator: ", ") ?? "None")")
-                    .font(.caption)
-                
-                Text("Product Ingredients: \(productInfo.ingredients?.prefix(100) ?? "None")")
-                    .font(.caption)
-                    .lineLimit(3)
-            }
-        }
-    }
-    
-    // Helper function to get allergen synonyms
-    private func getAllergenSynonyms(for allergen: String) -> [String] {
-        let allergenLower = allergen.lowercased()
-        
-        switch allergenLower {
-        case "milk":
-            return ["milk", "dairy", "lactose", "whey", "casein", "butter", "cream", "cheese", "yogurt", "lactose", "milk protein"]
-        case "peanut":
-            return ["peanut", "peanuts", "groundnut", "groundnuts", "arachis", "peanut butter"]
-        case "soy":
-            return ["soy", "soya", "soybean", "soybeans", "tofu", "miso", "tempeh", "soy protein", "soy lecithin"]
-        case "wheat":
-            return ["wheat", "gluten", "flour", "bread", "pasta", "cereal", "wheat protein", "wheat flour"]
-        case "gluten":
-            return ["gluten", "wheat", "rye", "barley", "triticale", "flour", "bread", "pasta", "cereal"]
-        case "fish":
-            return ["fish", "seafood", "salmon", "tuna", "cod", "mackerel", "sardine", "anchovy", "fish oil"]
-        case "egg":
-            return ["egg", "eggs", "albumin", "ovalbumin", "egg white", "egg yolk", "egg protein"]
-        case "tree nut":
-            return ["almond", "almonds", "walnut", "walnuts", "cashew", "cashews", "pecan", "pecans", "hazelnut", "hazelnuts", "pistachio", "pistachios", "macadamia", "macadamias", "brazil nut", "brazil nuts"]
-        case "shellfish":
-            return ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "mussels", "clam", "clams", "oyster", "oysters", "scallop", "scallops"]
-        case "sesame":
-            return ["sesame", "sesame seed", "sesame seeds", "tahini", "sesame oil", "sesamum"]
-        default:
-            return [allergenLower]
-        }
-    }
-
-    // Helper to check if user allergens include milk/dairy or synonyms
-    private var userHasMilkOrDairyAllergy: Bool {
-        let milkSynonyms = getAllergenSynonyms(for: "milk") + getAllergenSynonyms(for: "dairy")
-        let userAllergens = selectedAllergens.map { $0.lowercased() }
-        return userAllergens.contains(where: { allergen in
-            milkSynonyms.contains(where: { synonym in
-                allergen.contains(synonym)
-            })
-        })
-    }
-
-    private var isVanillaIceCream: Bool {
-        // You can adjust this check as needed for your vanilla ice cream product
-        let name = productInfo.nutrition?.item_name.lowercased() ?? ""
-        return name.contains("vanilla") && name.contains("ice cream")
-    }
-
-    private var filteredAlternatives: [AlternativeProduct]? {
-        if isVanillaIceCream {
-            if userHasMilkOrDairyAllergy {
-                return alternatives
-            } else {
-                return []
-            }
-        }
-        return alternatives
     }
 
     private var alternativesSection: some View {
         Group {
             if !isAlternative {
-                if let filtered = filteredAlternatives, !filtered.isEmpty {
+                if let alternatives = alternatives, !alternatives.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         // Modern header with background
                         VStack(alignment: .leading, spacing: 8) {
@@ -488,21 +331,26 @@ struct ProductDetailView: View {
                                             endPoint: .bottomTrailing
                                         ))
                                         .frame(width: 40, height: 40)
+                                    
                                     Image(systemName: "shield.checkered")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.green)
                                 }
+                                
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Allergen-Free Alternatives")
                                         .font(.system(size: 20, weight: .bold, design: .rounded))
                                         .foregroundColor(.primary)
+                                    
                                     Text("Safer options for your dietary needs")
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.secondary)
                                 }
+                                
                                 Spacer()
+                                
                                 // Badge showing count
-                                Text("\(filtered.count)")
+                                Text("\(alternatives.count)")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                                     .frame(width: 24, height: 24)
@@ -516,10 +364,11 @@ struct ProductDetailView: View {
                         .cornerRadius(15)
                         .shadow(radius: 3, x: 0, y: 2)
                         .padding(.horizontal, 16)
+                        
                         // Alternatives cards
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
-                                ForEach(filtered) { alt in
+                                ForEach(alternatives) { alt in
                                     alternativeCard(for: alt, forceNotEcoFriendly: true)
                                         .frame(width: 300)
                                 }

@@ -1,5 +1,14 @@
 import SwiftUI
 
+// Extension to hide keyboard on tap
+extension View {
+    func hideKeyboardOnTap() -> some View {
+        self.onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+    }
+}
+
 struct AllergensPreferencesView: View {
     @Environment(\.presentationMode) private var presentationMode
     @AppStorage("selectedAllergens") private var selectedAllergensString: String = ""
@@ -114,6 +123,7 @@ struct AllergensPreferencesView: View {
             // Save to storage
             selectedAllergensString = newValue.joined(separator: ",")
         }
+        .hideKeyboardOnTap() // Dismiss keyboard on tap
     }
 }
 
