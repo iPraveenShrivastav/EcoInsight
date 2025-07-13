@@ -347,7 +347,7 @@ struct EmptyRecentScansView: View {
                     EmptyScanCard(
                         icon: "barcode.viewfinder",
                         title: "Start Scanning",
-                        subtitle: "Scan your first product",
+                        subtitle: "Scan your product",
                         color: .blue
                     )
                     
@@ -355,7 +355,7 @@ struct EmptyRecentScansView: View {
                     EmptyScanCard(
                         icon: "leaf.circle.fill",
                         title: "Track Impact",
-                        subtitle: "See environmental data",
+                        subtitle: "See eco data",
                         color: .green
                     )
                     
@@ -363,7 +363,7 @@ struct EmptyRecentScansView: View {
                     EmptyScanCard(
                         icon: "chart.line.uptrend.xyaxis",
                         title: "Build History",
-                        subtitle: "Monitor your choices",
+                        subtitle: "Monitor your data",
                         color: .orange
                     )
                 }

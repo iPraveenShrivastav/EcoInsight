@@ -127,10 +127,32 @@ class ScannerViewModel: ObservableObject {
             URLSession.shared.dataTask(with: url) { data, _, _ in
                 if let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let product = json["product"] as? [String: Any],
-                   let tags = product["allergens_tags"] as? [String] {
-                    let clean = tags.compactMap { $0.split(separator: ":").last.map(String.init) }
-                    continuation.resume(returning: clean)
+                   let product = json["product"] as? [String: Any] {
+                    
+                    var allergens: [String] = []
+                    
+                    // Try multiple allergen fields from OpenFoodFacts
+                    if let tags = product["allergens_tags"] as? [String] {
+                        let clean = tags.compactMap { $0.split(separator: ":").last.map(String.init) }
+                        allergens.append(contentsOf: clean)
+                    }
+                    
+                    if let hierarchy = product["allergens_hierarchy"] as? [String] {
+                        let clean = hierarchy.compactMap { $0.split(separator: ":").last.map(String.init) }
+                        allergens.append(contentsOf: clean)
+                    }
+                    
+                    if let text = product["allergens"] as? String {
+                        // Parse allergens from text format
+                        let allergenList = text.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespaces)) }
+                        allergens.append(contentsOf: allergenList)
+                    }
+                    
+                    // Remove duplicates and empty strings
+                    let uniqueAllergens = Array(Set(allergens)).filter { !$0.isEmpty }
+                    
+                    print("🔍 Found allergens for \(upc): \(uniqueAllergens)")
+                    continuation.resume(returning: uniqueAllergens.isEmpty ? nil : uniqueAllergens)
                 } else {
                     continuation.resume(returning: nil)
                 }
