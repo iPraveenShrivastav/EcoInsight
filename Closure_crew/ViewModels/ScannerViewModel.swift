@@ -148,12 +148,44 @@ class ScannerViewModel: ObservableObject {
                         allergens.append(contentsOf: allergenList)
                     }
                     
-                    // Remove duplicates and empty strings
-                    let uniqueAllergens = Array(Set(allergens)).filter { !$0.isEmpty }
+                    // Also check for allergen traces
+                    if let traces = product["traces_tags"] as? [String] {
+                        let clean = traces.compactMap { $0.split(separator: ":").last.map(String.init) }
+                        allergens.append(contentsOf: clean)
+                    }
+                    
+                    // Remove duplicates and empty strings, and normalize
+                    let uniqueAllergens = Array(Set(allergens))
+                        .filter { !$0.isEmpty }
+                        .map { allergen in
+                            // Normalize common allergen names
+                            let lower = allergen.lowercased()
+                            switch lower {
+                            case "en:peanuts", "peanuts", "peanut":
+                                return "Peanut"
+                            case "en:milk", "milk":
+                                return "Milk"
+                            case "en:soy", "soy", "soybeans":
+                                return "Soy"
+                            case "en:wheat", "wheat":
+                                return "Wheat"
+                            case "en:fish", "fish":
+                                return "Fish"
+                            case "en:gluten", "gluten":
+                                return "Gluten"
+                            case "en:eggs", "eggs", "egg":
+                                return "Eggs"
+                            case "en:nuts", "nuts", "tree nuts":
+                                return "Nuts"
+                            default:
+                                return allergen.capitalized
+                            }
+                        }
                     
                     print("🔍 Found allergens for \(upc): \(uniqueAllergens)")
                     continuation.resume(returning: uniqueAllergens.isEmpty ? nil : uniqueAllergens)
                 } else {
+                    print("🔍 No product data found for \(upc)")
                     continuation.resume(returning: nil)
                 }
             }.resume()

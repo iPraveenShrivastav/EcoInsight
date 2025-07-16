@@ -85,7 +85,7 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
                 VStack(spacing: 0) {
                     if viewModel.scannedProducts.isEmpty {
                         Spacer()

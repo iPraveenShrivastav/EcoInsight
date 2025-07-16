@@ -118,10 +118,12 @@ struct AllergensPreferencesView: View {
             // Load from storage
             let saved = selectedAllergensString.split(separator: ",").map { String($0) }
             selectedAllergens = Set(saved)
+            print("🔍 AllergensPreferencesView - Loaded allergens: \(selectedAllergens)")
         }
         .onChange(of: selectedAllergens) { newValue in
             // Save to storage
             selectedAllergensString = newValue.joined(separator: ",")
+            print("🔍 AllergensPreferencesView - Saved allergens: \(selectedAllergensString)")
         }
         .hideKeyboardOnTap() // Dismiss keyboard on tap
     }

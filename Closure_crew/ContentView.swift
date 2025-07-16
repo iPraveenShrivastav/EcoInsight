@@ -18,7 +18,7 @@ struct ContentView: View {
         TabView {
             DashboardView(historyViewModel: historyViewModel)
                 .tabItem {
-                    Label("EcoScan", systemImage: "globe.americas.fill")
+                    Label("Dashboard", systemImage: "globe.americas.fill")
                 }
                 .onAppear {
                     print("📱 ContentView: Dashboard tab appeared")
