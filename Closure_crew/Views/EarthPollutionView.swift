@@ -108,6 +108,7 @@ struct EarthPollutionView: View {
                             Circle()
                                 .fill(Color.blue.opacity(0.3))
                                 .frame(width: 250, height: 250)
+                                .background(.ultraThinMaterial.opacity(0.3)) // UI only - no logic change: Material effect for earth visualization
                             
                             Circle()
                                 .fill(Color.red.opacity(0.2))
@@ -117,11 +118,13 @@ struct EarthPollutionView: View {
                                         .frame(height: 250 * pollutionPercentage)
                                         .offset(y: 125 * (2 - pollutionPercentage))
                                 )
+                                .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: UUID()) // UI only - no logic change: Animation for pollution visualization
                             
                             Image(systemName: "globe.americas.fill")
                                 .resizable()
                                 .foregroundColor(.green.opacity(0.8))
                                 .frame(width: 250, height: 250)
+                                .shadow(color: .green.opacity(0.3), radius: 8, x: 0, y: 4) // UI only - no logic change: Shadow effect for earth icon
                         }
                         
                         StatisticView(
@@ -249,7 +252,10 @@ struct EarthPollutionView: View {
         }
         .scrollIndicators(.hidden)
         .navigationTitle("Environmental Impact")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .navigationBar) // UI only - no logic change: Glass toolbar background
         .background(Color(.systemBackground).ignoresSafeArea())
+        .background(.ultraThinMaterial.opacity(0.1)) // UI only - no logic change: Subtle material tint for environmental impact view
     }
 }
 
@@ -267,6 +273,7 @@ struct CardView<Content: View>: View {
             .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(15)
             .shadow(radius: 3, x: 0, y: 2)
+            .background(.ultraThinMaterial.opacity(0.3)) // UI only - no logic change: Material tint for environmental cards
     }
 }
 

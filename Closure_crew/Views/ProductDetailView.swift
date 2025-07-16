@@ -55,6 +55,8 @@ struct ProductDetailView: View {
             .scrollIndicators(.hidden)
             .navigationTitle("Product Insights")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.visible, for: .navigationBar) // UI only - no logic change: Enhanced toolbar background
+            .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for product detail view
             .sheet(item: $altDetailProduct) { altProduct in
                 NavigationView {
                     ProductDetailView(
@@ -84,18 +86,29 @@ struct ProductDetailView: View {
                         // Notify parent
                         onChooseAlternative?(productInfo, replacingBarcode)
                     }) {
-                        Text("Choose This Product")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .cornerRadius(16)
-                            .padding(.horizontal, 24)
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.headline)
+                                .symbolEffect(.bounce, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
+                            Text("Choose This Product")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.green)
+                                .shadow(color: .green.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
+                        .padding(.horizontal, 24)
                     }
+                    .buttonStyle(.borderedProminent) // UI only - no logic change: Enhanced button style for choice action
                     .padding(.bottom, 24)
                 }
                 .background(Color(.systemBackground).opacity(0.95).ignoresSafeArea())
+                .background(.regularMaterial.opacity(0.9)) // UI only - no logic change: Material background for sticky button
                 .transition(.move(edge: .bottom))
             }
         }

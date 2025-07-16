@@ -45,6 +45,7 @@ struct AllergensPreferencesView: View {
                         }) {
                             HStack(spacing: 8) {
                                 Image(systemName: icon)
+                                    .symbolEffect(.bounce, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
                                 Text(name)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
@@ -56,7 +57,9 @@ struct AllergensPreferencesView: View {
                             .overlay(
                                 Capsule().stroke(selectedAllergens.contains(name) ? Color.green : Color(.systemGray4), lineWidth: 1)
                             )
+                            .background(.regularMaterial.opacity(selectedAllergens.contains(name) ? 0.8 : 0.3)) // UI only - no logic change: Material background for selected allergens
                         }
+                        .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style for allergen buttons
                     }
                 }
                 // Custom Allergens
@@ -66,6 +69,7 @@ struct AllergensPreferencesView: View {
                 HStack {
                     TextField("Add custom allergen", text: $customAllergen)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .background(.regularMaterial.opacity(0.8)) // UI only - no logic change: Material background for text field
                     Button(action: {
                         let trimmed = customAllergen.trimmingCharacters(in: .whitespacesAndNewlines)
                         if !trimmed.isEmpty && !selectedAllergens.contains(trimmed) {
@@ -76,7 +80,9 @@ struct AllergensPreferencesView: View {
                         Image(systemName: "plus.circle.fill")
                             .foregroundColor(.green)
                             .font(.title2)
+                            .symbolEffect(.bounce, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
                     }
+                    .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style for add button
                 }
                 // Show custom allergens as bubbles with remove "x"
                 if !selectedAllergens.subtracting(commonAllergens.map { $0.0 }).isEmpty {
@@ -112,8 +118,10 @@ struct AllergensPreferencesView: View {
             .padding()
         }
         .background(Color(.systemBackground).ignoresSafeArea())
+        .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for preferences
         .navigationTitle("Allergens")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .navigationBar) // UI only - no logic change: Enhanced toolbar background
         .onAppear {
             // Load from storage
             let saved = selectedAllergensString.split(separator: ",").map { String($0) }

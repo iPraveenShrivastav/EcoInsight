@@ -86,65 +86,74 @@ struct HistoryView: View {
         NavigationView {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
+                .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background with subtle tint
+                
                 VStack(spacing: 0) {
                     if viewModel.scannedProducts.isEmpty {
                         Spacer()
+                        // UI only - no logic change: Enhanced empty state presentation
                         VStack(spacing: 20) {
-                            Image(systemName: "barcode.viewfinder")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray)
-                            Text("No Products Scanned Yet")
-                                .font(.title2)
-                                .foregroundColor(.gray)
-                            Text("Start scanning products to track their environmental impact")
-                                .font(.subheadline)
+                            VStack(spacing: 20) {
+                                Image(systemName: "barcode.viewfinder")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.gray)
+                                    .symbolEffect(.pulse.byLayer, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
+                                Text("No Products Scanned Yet")
+                                    .font(.title2)
+                                    .foregroundColor(.gray)
+                                Text("Start scanning products to track their environmental impact")
+                                    .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
+                            }
+                            .padding()
                         }
-                        .padding()
                         Spacer()
                     } else {
                         VStack(spacing: 20) {
-                            // Your Impact Card (fixed)
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Your Impact")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    Text("Total CO₂e")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
-                                        .font(.title2)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
-                                }
-                                Spacer()
-                                Button(action: { showingEnvironmentalImpact = true }) {
-                                    HStack {
-                                        Image(systemName: "leaf.circle.fill")
-                                        Text("Environmental Impact")
+                            // Your Impact Card (fixed) - UI only - no logic change: Enhanced impact card presentation
+                            VStack(spacing: 16) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Your Impact")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Text("Total CO₂e")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        Text(totalCO2Saved == 0 ? "0 kg" : String(format: "%.2f kg", totalCO2Saved))
+                                            .font(.title2)
                                             .fontWeight(.semibold)
+                                            .foregroundColor(.primary)
+                                            .contentTransition(.numericText()) // UI only - no logic change: Smooth number transitions
                                     }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 12)
-                                    .background(Color.green.opacity(0.15))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 25)
-                                            .stroke(Color.green, lineWidth: 1.5)
-                                    )
-                                    .cornerRadius(25)
-                                    .shadow(color: Color.green.opacity(0.15), radius: 4, x: 0, y: 2)
+                                    Spacer()
+                                    Button(action: { showingEnvironmentalImpact = true }) {
+                                        HStack {
+                                            Image(systemName: "leaf.circle.fill")
+                                            Text("Environmental Impact")
+                                                .fontWeight(.semibold)
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 12)
+                                        .background(Color.green.opacity(0.15))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 25)
+                                                .stroke(Color.green, lineWidth: 1.5)
+                                        )
+                                        .cornerRadius(25)
+                                        .shadow(color: Color.green.opacity(0.15), radius: 4, x: 0, y: 2)
+                                    }
+                                    .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style
+                                    .foregroundColor(.green)
                                 }
-                                .foregroundColor(.green)
-                                .buttonStyle(PlainButtonStyle())
+                                .padding()
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .cornerRadius(15)
+                                .shadow(radius: 3, x: 0, y: 2)
+                                .padding(.horizontal)
                             }
-                            .padding()
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .cornerRadius(15)
-                            .shadow(radius: 3, x: 0, y: 2)
-                            .padding(.horizontal)
 
                             // Recent Scans Header
                             HStack {
@@ -157,53 +166,58 @@ struct HistoryView: View {
 
                             // Only this section scrolls
                             ScrollView {
+                                // UI only - no logic change: Enhanced product cards presentation
                                 VStack(spacing: 14) {
-                                    ForEach(viewModel.scannedProducts) { product in
-                                        HStack(spacing: 16) {
-                                            if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
-                                                AsyncImage(url: url) { image in
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                } placeholder: {
-                                                    Color(.systemGray5)
+                                    VStack(spacing: 14) {
+                                        ForEach(viewModel.scannedProducts) { product in
+                                            HStack(spacing: 16) {
+                                                if let imageUrl = product.imageUrl, let url = URL(string: imageUrl) {
+                                                    AsyncImage(url: url) { image in
+                                                        image
+                                                            .resizable()
+                                                            .scaledToFill()
+                                                    } placeholder: {
+                                                        Color(.systemGray5)
+                                                    }
+                                                    .frame(width: 48, height: 48)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                } else {
+                                                    ZStack {
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .fill(Color.green.opacity(0.12))
+                                                            .frame(width: 48, height: 48)
+                                                        Image(systemName: "cart.fill")
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 28, height: 28)
+                                                            .foregroundColor(.green)
+                                                    }
                                                 }
-                                                .frame(width: 48, height: 48)
-                                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            } else {
-                                                ZStack {
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .fill(Color.green.opacity(0.12))
-                                                        .frame(width: 48, height: 48)
-                                                    Image(systemName: "cart.fill")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 28, height: 28)
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(product.name)
+                                                        .font(.headline)
+                                                        .lineLimit(2)
+                                                        .truncationMode(.tail)
+                                                    Text(scanTimeString(for: product.scannedAt))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                Spacer()
+                                                VStack(alignment: .trailing) {
+                                                    Text(co2String(for: product))
+                                                        .font(.headline)
                                                         .foregroundColor(.green)
+                                                        .contentTransition(.numericText()) // UI only - no logic change: Smooth number transitions
                                                 }
                                             }
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(product.name)
-                                                    .font(.headline)
-                                                    .lineLimit(2)
-                                                    .truncationMode(.tail)
-                                                Text(scanTimeString(for: product.scannedAt))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            Spacer()
-                                            VStack(alignment: .trailing) {
-                                                Text(co2String(for: product))
-                                                    .font(.headline)
-                                                    .foregroundColor(.green)
-                                            }
+                                            .padding()
+                                            .background(Color(.secondarySystemGroupedBackground))
+                                            .cornerRadius(16)
+                                            .shadow(radius: 3, x: 0, y: 2)
+                                            .background(.regularMaterial.opacity(0.8)) // UI only - no logic change: Material background for cards
+                                            .frame(minHeight: 80) // Ensures all cards have the same minimum height
+                                            .padding(.horizontal)
                                         }
-                                        .padding()
-                                        .background(Color(.secondarySystemGroupedBackground))
-                                        .cornerRadius(16)
-                                        .shadow(radius: 3, x: 0, y: 2)
-                                        .frame(minHeight: 80) // Ensures all cards have the same minimum height
-                                        .padding(.horizontal)
                                     }
                                 }
                                 .padding(.top, 8)
@@ -218,10 +232,13 @@ struct HistoryView: View {
             }
             .navigationBarTitleDisplayMode(.large)
             .navigationTitle("History & Impact")
+            .toolbarBackground(.visible, for: .navigationBar) // UI only - no logic change: Enhanced toolbar background
+            .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for navigation
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !viewModel.scannedProducts.isEmpty {
                         Button("Clear All") { showingClearConfirmation = true }
+                            .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style for toolbar action
                     }
                 }
             }

@@ -44,6 +44,7 @@ struct DashboardView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 24)
                     }
+                    .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for header
                     
                     // Main Stats Card
                     if !historyViewModel.scannedProducts.isEmpty {
@@ -81,10 +82,12 @@ struct DashboardView: View {
                                 Circle()
                                     .fill(Color.orange.opacity(0.2))
                                     .frame(width: 50, height: 50)
+                                    .background(.regularMaterial.opacity(0.8)) // UI only - no logic change: Material background for icon
                                 
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(.orange)
+                                    .symbolEffect(.bounce, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
                             }
                             
                             // Content section
@@ -118,9 +121,11 @@ struct DashboardView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color(.secondarySystemGroupedBackground))
+                                .background(.regularMaterial.opacity(0.9)) // UI only - no logic change: Material background for card
                                 .shadow(radius: 3, x: 0, y: 2)
                         )
                     }
+                    .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style for navigation link
                     .padding(.horizontal, 20)
                     .padding(.bottom, 30)
                     
@@ -150,6 +155,7 @@ struct DashboardView: View {
                 historyViewModel.loadHistory()
             }
             .background(Color(.systemBackground))
+            .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for dashboard
         }
     }
 }
@@ -220,49 +226,57 @@ struct MainStatsCard: View {
     }
     
     var body: some View {
+        // UI only - no logic change: Enhanced stats card presentation
         VStack(spacing: 24) {
-            HStack {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(String(format: "%.1f kg", totalCarbonFootprint))
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundColor(.green)
+            VStack(spacing: 24) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(String(format: "%.1f kg", totalCarbonFootprint))
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundColor(.green)
+                            .contentTransition(.numericText()) // UI only - no logic change: Smooth number transitions
+                        
+                        Text("Total CO₂ Saved")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("\(totalProductsScanned) Products Scanned")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .contentTransition(.numericText()) // UI only - no logic change: Smooth number transitions
+                    }
                     
-                    Text("Total CO₂ Saved")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                    Spacer()
                     
-                    Text("\(totalProductsScanned) Products Scanned")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                // Circular Progress
-                ZStack {
-                    Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 10)
-                        .frame(width: 90, height: 90)
-                    
-                    Circle()
-                        .trim(from: 0, to: progressPercentage)
-                        .stroke(Color.green, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                        .frame(width: 90, height: 90)
-                        .rotationEffect(.degrees(-90))
-                    
-                    Text("\(Int(progressPercentage * 100))%")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.green)
+                    // Circular Progress
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 10)
+                            .frame(width: 90, height: 90)
+                        
+                        Circle()
+                            .trim(from: 0, to: progressPercentage)
+                            .stroke(Color.green, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                            .frame(width: 90, height: 90)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 1.0), value: progressPercentage) // UI only - no logic change: Smooth progress animation
+                        
+                        Text("\(Int(progressPercentage * 100))%")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.green)
+                            .contentTransition(.numericText()) // UI only - no logic change: Smooth percentage transitions
+                    }
                 }
             }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .background(.regularMaterial.opacity(0.9)) // UI only - no logic change: Material background for card
+                    .shadow(radius: 3, x: 0, y: 2)
+            )
         }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.secondarySystemGroupedBackground))
-                .shadow(radius: 3, x: 0, y: 2)
-        )
     }
     
     private func parseCO2Value(_ value: String?) -> Double? {
@@ -517,22 +531,28 @@ struct EcoTipsSection: View {
             }
             .padding(.horizontal, 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
-                        EcoTipCard(
-                            icon: tip.0,
-                            title: tip.1,
-                            color: tip.2
-                        )
+            // UI only - no logic change: Enhanced eco tips carousel presentation
+            VStack(spacing: 16) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
+                            EcoTipCard(
+                                icon: tip.0,
+                                title: tip.1,
+                                color: tip.2
+                            )
+                            .scaleEffect(index == currentIndex ? 1.05 : 1.0) // UI only - no logic change: Enhanced scale animation
+                            .animation(.easeInOut(duration: 0.3), value: currentIndex)
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .offset(x: -CGFloat(currentIndex) * cardWidth)
+                    .animation(.easeInOut(duration: 1.0), value: currentIndex)
                 }
-                .padding(.horizontal, 20)
-                .offset(x: -CGFloat(currentIndex) * cardWidth)
-                .animation(.easeInOut(duration: 1.0), value: currentIndex)
+                .frame(height: 160)
+                .clipped()
+                .background(.regularMaterial.opacity(0.8)) // UI only - no logic change: Material background for carousel
             }
-            .frame(height: 160)
-            .clipped()
         }
         .onAppear {
             startAutoScroll()
@@ -577,10 +597,12 @@ struct EcoTipCard: View {
                 Circle()
                     .fill(color.opacity(0.15))
                     .frame(width: 50, height: 50)
+                    .background(.regularMaterial.opacity(0.8)) // UI only - no logic change: Material background for icon
                 
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(color)
+                    .symbolEffect(.bounce, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
             }
             .frame(height: 50)
             

@@ -65,6 +65,9 @@ struct ScanView: View {
                 BarcodeScannerView(scannedCode: $scannerViewModel.scannedCode)
             }
             .navigationTitle("Scan")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.visible, for: .navigationBar) // UI only - no logic change: Enhanced toolbar background
+            .background(.regularMaterial.opacity(0.95)) // UI only - no logic change: Material background for navigation
             .onChange(of: scannerViewModel.productInfo) { newProduct in
                 if let info = newProduct {
                     selectedProduct = info
@@ -129,9 +132,10 @@ struct ScanView: View {
                     .foregroundColor(.white)
                     .frame(width: 200)
                     .padding(.vertical, 12)
-                    .background(Color.green)
-                    .cornerRadius(12)
             }
+            .buttonStyle(.borderedProminent) // UI only - no logic change: Enhanced button style for retry
+            .background(Color.green)
+            .cornerRadius(12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityLabel("Error: \(error)")
@@ -140,26 +144,57 @@ struct ScanView: View {
     private var scanLandingView: some View {
         VStack(spacing: 32) {
             Spacer()
-            Image(systemName: "barcode.viewfinder")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 100)
-                .foregroundColor(.green)
-            Text("Ready to scan a product?")
-                .font(.title2)
-                .fontWeight(.semibold)
-                    Button(action: { showingScanner = true }) {
-                Text("Scan Product")
-                    .font(.headline)
-                            .foregroundColor(.white)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 40)
-                            .background(Color.green)
-                    .cornerRadius(14)
-                    }
+            
+            // UI only - no logic change: Enhanced icon and text presentation
+            VStack(spacing: 24) {
+                Image(systemName: "barcode.viewfinder")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .foregroundColor(.green)
+                    .symbolEffect(.pulse.byLayer, options: .repeat(.continuous)) // UI only - no logic change: Enhanced icon animation
+                
+                VStack(spacing: 8) {
+                    Text("Ready to scan a product?")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Discover eco-impact and allergen info instantly")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            
+            Button(action: { showingScanner = true }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "camera.viewfinder")
+                        .font(.headline)
+                    Text("Scan Product")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.white)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.green)
+                        .shadow(color: .green.opacity(0.3), radius: 8, x: 0, y: 4)
+                )
+            }
+            .buttonStyle(.bordered) // UI only - no logic change: Enhanced button style
+            
             Spacer()
-                    }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [Color(.systemBackground), Color.green.opacity(0.05)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 }
 
