@@ -1,5 +1,7 @@
 import SwiftUI
 import AVFoundation
+import PhotosUI
+import UIKit
 
 // Set your Gemini API key here
 let GEMINI_API_KEY = "AIzaSyChk26SFhMAhZIUVMnYNPwXdoREpT1iUg0"
@@ -8,6 +10,8 @@ struct ScanView: View {
     @StateObject private var scannerViewModel: ScannerViewModel
     @State private var showingScanner = false
     @State private var selectedProduct: ProductInfo? = nil
+    @State private var selectedPhoto: PhotosPickerItem? = nil
+    @State private var selectedUIImage: UIImage? = nil
     
     // Hardcoded alternatives for Häagen‑Dazs Vanilla Ice Cream
     private let haagenDazsAlternatives = [
@@ -49,7 +53,7 @@ struct ScanView: View {
             ZStack {
                 // Background
                 Color(.systemBackground)
-                    .edgesIgnoringSafeArea(.all)
+                    .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     if scannerViewModel.isLoading {
@@ -64,6 +68,21 @@ struct ScanView: View {
             .sheet(isPresented: $showingScanner) {
                 BarcodeScannerView(scannedCode: $scannerViewModel.scannedCode)
             }
+            .onChange(of: selectedPhoto) { newItem in
+                if let newItem = newItem {
+                    Task {
+                        if let data = try? await newItem.loadTransferable(type: Data.self),
+                           let uiImage = UIImage(data: data),
+                           let cgImage = uiImage.normalizedCGImage(maxDimension: 1024) {
+                            let normalizedImage = UIImage(cgImage: cgImage)
+                            selectedUIImage = normalizedImage
+                            scannerViewModel.scanBarcode(from: normalizedImage)
+                        } else {
+                            scannerViewModel.error = "Could not load a valid image for barcode detection."
+                        }
+                    }
+                }
+            }
             .navigationTitle("Scan")
             .onChange(of: scannerViewModel.productInfo) { newProduct in
                 if let info = newProduct {
@@ -75,7 +94,7 @@ struct ScanView: View {
                 let validBarcodes = ["055000205528", "0055000205528"]
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
                 let showAlternatives = validBarcodes.contains(normalizedBarcode)
-                return ProductDetailView(
+                ProductDetailView(
                     productInfo: product,
                     scannerViewModel: scannerViewModel,
                     onBack: {
@@ -145,21 +164,45 @@ struct ScanView: View {
                 .scaledToFit()
                 .frame(width: 100, height: 100)
                 .foregroundColor(.green)
+                .padding(.bottom, 8)
             Text("Ready to scan a product?")
                 .font(.title2)
                 .fontWeight(.semibold)
-                    Button(action: { showingScanner = true }) {
-                Text("Scan Product")
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 8)
+            VStack(spacing: 18) {
+                Button(action: { showingScanner = true }) {
+                    HStack {
+                        Image(systemName: "viewfinder")
+                        Text("Scan Product")
+                    }
                     .font(.headline)
-                            .foregroundColor(.white)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 40)
-                            .background(Color.green)
-                    .cornerRadius(14)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.green)
+                    .cornerRadius(18)
+                }
+                .glassEffect()
+                PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
+                    HStack {
+                        Image(systemName: "photo.on.rectangle")
+                        Text("Scan from Photo")
                     }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.blue)
+                    .cornerRadius(18)
+                }
+                .glassEffect()
+            }
+            .padding(.horizontal, 32)
             Spacer()
-                    }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white.ignoresSafeArea())
     }
 }
 
@@ -226,5 +269,70 @@ struct ScannerOverlay: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Glass Effect Modifier
+import SwiftUI
+
+struct GlassEffect: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .blur(radius: 0.5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+}
+
+extension View {
+    func glassEffect() -> some View {
+        self.modifier(GlassEffect())
+    }
+}
+
+extension UIImage {
+    /// Returns a new UIImage with .up orientation and a valid cgImage, or nil if conversion fails.
+    func normalizedCGImage(maxDimension: CGFloat = 1024) -> CGImage? {
+        // Downscale if needed
+        var imageToUse = self
+        let maxSide = max(size.width, size.height)
+        if maxSide > maxDimension {
+            let scale = maxDimension / maxSide
+            let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+            self.draw(in: CGRect(origin: .zero, size: newSize))
+            if let resized = UIGraphicsGetImageFromCurrentImageContext() {
+                imageToUse = resized
+            }
+            UIGraphicsEndImageContext()
+        }
+        // Normalize orientation to .up
+        if imageToUse.imageOrientation != .up {
+            UIGraphicsBeginImageContextWithOptions(imageToUse.size, false, imageToUse.scale)
+            imageToUse.draw(in: CGRect(origin: .zero, size: imageToUse.size))
+            let normalized = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            if let normalized = normalized {
+                imageToUse = normalized
+            }
+        }
+        // Ensure cgImage exists
+        if let cgImage = imageToUse.cgImage {
+            return cgImage
+        }
+        // Try CIImage conversion
+        if let ciImage = imageToUse.ciImage {
+            let context = CIContext()
+            return context.createCGImage(ciImage, from: ciImage.extent)
+        }
+        return nil
     }
 }

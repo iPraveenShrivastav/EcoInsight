@@ -1,4 +1,8 @@
 import Foundation
+import UIKit
+import Vision
+import ImageIO
+import CoreImage
 
 @MainActor
 class ScannerViewModel: ObservableObject {
@@ -196,6 +200,45 @@ class ScannerViewModel: ObservableObject {
     func testScan(barcode: String) {
         self.scannedCode = barcode
     }
+    
+    // MARK: - Scan barcode from UIImage (for Scan from Photo)
+    func scanBarcode(from image: UIImage) {
+        guard let cgImage = image.normalizedCGImage(maxDimension: 1024) else {
+            self.error = "Image is not valid for barcode detection."
+            return
+        }
+        isLoading = true
+        error = nil
+
+        // Always use .up orientation for Vision
+        let request = VNDetectBarcodesRequest { [weak self] request, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    self?.error = "Barcode detection failed: \(error.localizedDescription)"
+                    self?.isLoading = false
+                    return
+                }
+                guard let results = request.results as? [VNBarcodeObservation],
+                      let payload = results.first?.payloadStringValue else {
+                    self?.error = "No barcode found in image."
+                    self?.isLoading = false
+                    return
+                }
+                self?.scannedCode = payload
+            }
+        }
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try handler.perform([request])
+            } catch {
+                DispatchQueue.main.async {
+                    self.error = "Failed to perform barcode detection: \(error.localizedDescription)"
+                    self.isLoading = false
+                }
+            }
+        }
+    }
 }
 
 extension ScannerViewModel {
@@ -239,5 +282,52 @@ extension ScannerViewModel {
             imageUrl: productInfo.productImageUrl
         )
         historyViewModel.addScan(product)
+    }
+}
+
+// Helper to convert UIImage.Orientation to CGImagePropertyOrientation
+extension CGImagePropertyOrientation {
+    init(_ uiOrientation: UIImage.Orientation) {
+        switch uiOrientation {
+        case .up: self = .up
+        case .down: self = .down
+        case .left: self = .left
+        case .right: self = .right
+        case .upMirrored: self = .upMirrored
+        case .downMirrored: self = .downMirrored
+        case .leftMirrored: self = .leftMirrored
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
+    }
+}
+
+// Extension to robustly convert UIImage to CGImage
+extension UIImage {
+    func toCGImage(maxDimension: CGFloat = 1024) -> CGImage? {
+        var imageToUse = self
+        let maxSide = max(size.width, size.height)
+        if maxSide > maxDimension {
+            let scale = maxDimension / maxSide
+            let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+            self.draw(in: CGRect(origin: .zero, size: newSize))
+            if let resized = UIGraphicsGetImageFromCurrentImageContext() {
+                imageToUse = resized
+            }
+            UIGraphicsEndImageContext()
+        }
+        if let cgImage = imageToUse.cgImage {
+            return cgImage
+        }
+        if let ciImage = imageToUse.ciImage {
+            let context = CIContext()
+            return context.createCGImage(ciImage, from: ciImage.extent)
+        }
+        UIGraphicsBeginImageContextWithOptions(imageToUse.size, false, imageToUse.scale)
+        defer { UIGraphicsEndImageContext() }
+        imageToUse.draw(at: .zero)
+        let drawnImage = UIGraphicsGetImageFromCurrentImageContext()
+        return drawnImage?.cgImage
     }
 }
