@@ -135,22 +135,27 @@ struct ScanView: View {
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 32)
             
-            if let code = scannerViewModel.scannedCode {
-                Text("Scanned Barcode: \(code)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 8)
+            VStack(spacing: 14) {
+                Button(action: { showingScanner = true }) {
+                    Text("Try Again (Scan Product)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.green)
+                        .cornerRadius(14)
+                }
+                PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
+                    Text("Scan from Photo")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.blue)
+                        .cornerRadius(14)
+                }
             }
-            
-            Button(action: { showingScanner = true }) {
-                Text("Try Again")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(width: 200)
-                    .padding(.vertical, 12)
-                    .background(Color.green)
-                    .cornerRadius(12)
-            }
+            .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityLabel("Error: \(error)")

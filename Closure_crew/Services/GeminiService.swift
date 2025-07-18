@@ -9,15 +9,12 @@ class GeminiService {
 
     func estimateCarbon(for productInfo: ProductInfo) async -> String? {
         let prompt = """
-Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product, and determine if it is eco-friendly or not. 
-Base your answer strictly on the product's packaging, ingredients, and quantity. 
-If the packaging is recyclable, minimal, or compostable, and the ingredients are plant-based or have low environmental impact, label as "Eco-Friendly". Otherwise, label as "Not Eco-Friendly".
+Estimate the total carbon footprint for the product below in kilograms of CO₂ equivalent (kg CO₂e), considering its packaging, ingredients, and quantity. Use the latest lifecycle assessment (LCA) data or published averages. If an exact match is unavailable, use the closest similar product.
 
-Return your answer in the following format, with no explanation or extra text:
-<carbon_footprint_value> <eco_friendly_label>
+Respond in this format only (no explanation, breakdown, or reasoning):
+<total_kg_co2e> <Eco_Label>
 
-Example:
-0.15 Eco-Friendly
+Label as "Eco-Friendly" only if the packaging is recyclable, compostable, or minimal and the ingredients are mostly plant-based or low impact. Otherwise, use "Not Eco-Friendly".
 
 Product details:
 - Name: \(productInfo.nutrition?.item_name ?? "Unknown")
@@ -101,15 +98,12 @@ extension GeminiService {
 
     func fetchCarbonFootprintBreakdown(for product: ProductInfo) async throws -> CarbonFootprintResult? {
         let prompt = """
-Given the following product details, estimate the total carbon footprint in kilograms of CO₂ equivalent (kg CO₂e) for the product, and determine if it is eco-friendly or not. 
-Base your answer strictly on the product's packaging, ingredients, and quantity. 
-If the packaging is recyclable, minimal, or compostable, and the ingredients are plant-based or have low environmental impact, label as "Eco-Friendly". Otherwise, label as "Not Eco-Friendly".
+Estimate the total carbon footprint for the product below in kilograms of CO₂ equivalent (kg CO₂e), considering its packaging, ingredients, and quantity. Use the latest lifecycle assessment (LCA) data or published averages. If an exact match is unavailable, use the closest similar product.
 
-Return your answer in the following format, with no explanation or extra text:
-<carbon_footprint_value> <eco_friendly_label>
+Respond in this format only (no explanation, breakdown, or reasoning):
+<total_kg_co2e> <Eco_Label>
 
-Example:
-0.15 Eco-Friendly
+Label as "Eco-Friendly" only if the packaging is recyclable, compostable, or minimal and the ingredients are mostly plant-based or low impact. Otherwise, use "Not Eco-Friendly".
 
 Product details:
 - Name: \(product.nutrition?.item_name ?? "")
